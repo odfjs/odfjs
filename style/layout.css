@@ -1,0 +1,6 @@
+
+/* Layout */
+body > * {
+    width: 100%;
+    padding: 0 calc( max(5px, ( 100vw - 50em ) / 2 ));
+}

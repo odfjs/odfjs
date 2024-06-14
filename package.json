@@ -1,0 +1,24 @@
+{
+  "name": "front-end-template",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "npm-run-all --parallel dev:* start",
+    "dev:rollup": "rollup -c -w",
+    "start": "http-server -c-1 ."
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "http-server": "^14.1.1",
+    "npm-run-all": "^4.1.5",
+    "rollup": "^4.18.0",
+    "rollup-plugin-css-only": "^4.5.2",
+    "rollup-plugin-svelte": "^7.1.6",
+    "sass": "^1.58.3",
+    "svelte": "^4.2.9",
+    "svelte-preprocess": "^5.1.3"
+  }
+}
