@@ -10,9 +10,9 @@
 
 	/** @type {File} */
 	$: file = files && files[0]
-	$: console.log('file', file)
 	$: tableRawContent = file && getTableRawContentFromFile(file)
 	$: tableObjectSheets = tableRawContent && tableRawContent.then(tableRawContentToObjects) || []
+	$: Promise.resolve(tableObjectSheets).then(x => console.log('tableObjectSheets', x))
 
 </script>
 
