@@ -9,7 +9,7 @@ const production = !process.env.ROLLUP_WATCH;
 
 
 export default {
-	input: 'scripts/main.js',
+	input: 'scripts/front-end.js',
 	output: {
 		sourcemap: true,
 		format: 'es',

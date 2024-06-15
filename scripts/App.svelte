@@ -1,8 +1,31 @@
 <script>
-	export let name;
+	import getTableRawContentFromFile from './getTableRawContentFromFile.js'
+
+	const ODS_TYPE = "application/vnd.oasis.opendocument.spreadsheet";
+	const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+	let files
+
+	let tableRawContent;
+
+	/** @type {File} */
+	$: file = files && files[0]
+	$: console.log('file', file)
+	$: tableRawContent = file && getTableRawContentFromFile(file)
+	$: console.log('tableRawContent', tableRawContent)
+
 </script>
 
-<h2>Hello {name}! 🧝🏿</h2>
+<h1>Import fichier .ods et .xslx</h1>
+
+<section>
+	<label>
+		Fichier à importer:
+		<input bind:files type="file" id="file-input" accept="{ ['.ods', '.xlsx', ODS_TYPE, XLSX_TYPE].join(',') }" />
+	</label>
+</section>
+
+
 
 <style lang="scss">
 	
@@ -15,13 +38,6 @@
 		@media (min-width: 640px) {
 			max-width: none;
 		}
-	}
-
-	h2 {
-		color: #ff3e00;
-		text-transform: uppercase;
-		font-size: 4em;
-		font-weight: 100;
 	}
 	
 </style>
