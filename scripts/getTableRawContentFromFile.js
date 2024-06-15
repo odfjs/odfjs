@@ -15,7 +15,7 @@ function parseXML(str){
 
 /**
  * @typedef TableCellRawContent
- * @prop {string} value
+ * @prop {string | null | undefined} value
  * @prop {'float' | 'percentage' | 'currency' | 'date' | 'time' | 'boolean' | 'string' | 'b' | 'd' | 'e' | 'inlineStr' | 'n' | 's' | 'str'} type
  * 
  */
@@ -23,39 +23,6 @@ function parseXML(str){
 const ODS_TYPE = "application/vnd.oasis.opendocument.spreadsheet";
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
-
-/**
- * Converts a cell value to the appropriate JavaScript type based on its cell type.
- * @param {string} value - The value of the cell.
- * @param {TableCellRawContent['type']} cellType - The type of the cell.
- * @returns {any} The converted value.
- */
-function convertCellValue(value, cellType) {
-    if(value === ''){
-        return ''
-    }
-
-    switch (cellType) {
-        case 'float':
-        case 'percentage':
-        case 'currency':
-        case 'n': // number
-            return parseFloat(value);
-        case 'date':
-        case 'd': // date
-            return new Date(value);
-        case 'boolean':
-        case 'b': // boolean
-            return value === '1' || value === 'true';
-        case 's': // shared string
-        case 'inlineStr': // inline string
-        case 'string':
-        case 'e': // error
-        case 'time':
-        default:
-            return value;
-    }
-}
 
 /**
  * Extracts raw table content from an ODS file.
@@ -66,7 +33,6 @@ function convertCellValue(value, cellType) {
  */
 async function getTableRawContentFromODSFile(file, unzip, parseXML) {
     const zip = await unzip(file);
-    console.log('zip', zip)
     const entries = zip.entries;
 
     // Extract the content.xml file which contains the spreadsheet data
@@ -179,7 +145,7 @@ async function getTableRawContentFromXSLXFile(file, unzip, parseXML) {
  * @param {File} file 
  * @returns {Promise<Map<SheetName, TableCellRawContent[][]>>}
  */
-export default function getTableRawContentFromFile(file){
+export function getTableRawContentFromFile(file){
     if(file.type === ODS_TYPE)
         return getTableRawContentFromODSFile(file, unzip, parseXML)
 
@@ -189,4 +155,79 @@ export default function getTableRawContentFromFile(file){
     throw new TypeError(`Unsupported file type: ${file.type} (${file.name})`)
 }
 
+
+
+/**
+ * Converts a cell value to the appropriate JavaScript type based on its cell type.
+ * @param {TableCellRawContent} _ 
+ * @returns {number | boolean | string | Date} The converted value.
+ */
+function convertCellValue({value, type}) {
+    if(value === ''){
+        return ''
+    }
+    if(value === null || value === undefined){
+        return ''
+    }
+
+    switch (type) {
+        case 'float':
+        case 'percentage':
+        case 'currency':
+        case 'n': // number
+            return parseFloat(value);
+        case 'date':
+        case 'd': // date
+            return new Date(value);
+        case 'boolean':
+        case 'b': // boolean
+            return value === '1' || value === 'true';
+        case 's': // shared string
+        case 'inlineStr': // inline string
+        case 'string':
+        case 'e': // error
+        case 'time':
+        default:
+            return value;
+    }
+}
+
+/**
+ * 
+ * @param {TableCellRawContent[][]} rawContent 
+ * @returns {any[]}
+ */
+function rawContentToObjects(rawContent){
+    let [firstRow, ...dataRows] = rawContent
+
+    /** @type {string[]} */
+    //@ts-expect-error trust me, this is true after the filter
+    const columns = firstRow.filter(({value}) => typeof value === 'string' && value.length >= 1).map(r => r.value)
+
+    return dataRows.map(row => {
+        const obj = Object.create(null)
+        let empty = true
+        columns.forEach((column, i) => {
+            const rawValue = row[i]
+            obj[column] = rawValue ? convertCellValue(rawValue) : ''
+            empty = empty && (obj[column] === '')
+        })
+        return empty ? undefined : obj
+    }).filter(x => x !== undefined) // remove empty rows
+
+}
+
+
+/**
+ * 
+ * @param {Map<SheetName, TableCellRawContent[][]>} rawContentSheets 
+ * @returns {Map<SheetName, any[]>}
+ */
+export function tableRawContentToObjects(rawContentSheets){
+    return new Map(
+        [...rawContentSheets].map(([sheetName, rawContent]) => {
+            return [sheetName, rawContentToObjects(rawContent)]
+        })
+    )
+}
 
