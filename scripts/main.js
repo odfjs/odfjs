@@ -241,7 +241,7 @@ function rawContentToObjects(rawContent){
  * @param {Map<SheetName, SheetRawContent>} rawContentSheets 
  * @returns {Map<SheetName, any[]>}
  */
-export function sheetRawContentToObjects(rawContentSheets){
+export function tableRawContentToObjects(rawContentSheets){
     return new Map(
         [...rawContentSheets].map(([sheetName, rawContent]) => {
             return [sheetName, rawContentToObjects(rawContent)]
