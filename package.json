@@ -1,7 +1,8 @@
 {
   "name": "front-end-template",
-  "version": "2.0.0",
+  "version": "0.0.1",
   "type": "module",
+  "browser": "./scripts/main.js",
   "scripts": {
     "build": "rollup -c",
     "dev": "npm-run-all --parallel dev:* start",

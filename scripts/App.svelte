@@ -1,5 +1,5 @@
 <script>
-	import {getTableRawContentFromFile, tableRawContentToObjects} from './getTableRawContentFromFile.js'
+	import {getTableRawContentFromFile, tableRawContentToObjects} from './main.js'
 
 	const ODS_TYPE = "application/vnd.oasis.opendocument.spreadsheet";
 	const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -68,9 +68,6 @@
 		max-width: 80rem;
 		margin: 0 auto;
 
-		@media (min-width: 640px) {
-			max-width: none;
-		}
 	}
 
 	table{

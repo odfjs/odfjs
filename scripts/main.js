@@ -2,23 +2,17 @@
 
 import { unzip } from 'unzipit';
 
-const parser = new DOMParser();
-
 /**
- * 
- * @param {string} str 
- * @returns {Document}
- */
-function parseXML(str){
-    return parser.parseFromString(str, 'application/xml');
-}
-
-/**
- * @typedef TableCellRawContent
+ * @typedef SheetCellRawContent
  * @prop {string | null | undefined} value
  * @prop {'float' | 'percentage' | 'currency' | 'date' | 'time' | 'boolean' | 'string' | 'b' | 'd' | 'e' | 'inlineStr' | 'n' | 's' | 'str'} type
- * 
  */
+
+/** @typedef {SheetCellRawContent[]} SheetRowRawContent */
+/** @typedef {SheetRowRawContent[]} SheetRawContent */
+
+/** @typedef {string} SheetName */
+
 
 const ODS_TYPE = "application/vnd.oasis.opendocument.spreadsheet";
 const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -29,7 +23,7 @@ const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
  * @param {File} file - The ODS file.
  * @param {Function} unzip - Function to unzip the file.
  * @param {Function} parseXML - Function to parse XML content.
- * @returns {Promise<Map<SheetName, TableCellRawContent[][]>>}
+ * @returns {Promise<Map<SheetName, SheetRawContent>>}
  */
 async function getTableRawContentFromODSFile(file, unzip, parseXML) {
     const zip = await unzip(file);
@@ -41,7 +35,6 @@ async function getTableRawContentFromODSFile(file, unzip, parseXML) {
 
     const tableMap = new Map();
 
-    // Navigate the XML structure to extract table data
     const tables = contentDoc.getElementsByTagName('table:table');
 
     for (let table of tables) {
@@ -76,13 +69,12 @@ async function getTableRawContentFromODSFile(file, unzip, parseXML) {
  * @param {File} file - The XLSX file.
  * @param {Function} unzip - Function to unzip the file.
  * @param {Function} parseXML - Function to parse XML content.
- * @returns {Promise<Map<SheetName, TableCellRawContent[][]>>}
+ * @returns {Promise<Map<SheetName, SheetRawContent>>}
  */
 async function getTableRawContentFromXSLXFile(file, unzip, parseXML) {
     const zip = await unzip(file);
     const entries = zip.entries;
 
-    // Read shared strings
     const sharedStringsXml = await entries['xl/sharedStrings.xml'].text();
     const sharedStringsDoc = parseXML(sharedStringsXml);
     const sharedStrings = Array.from(sharedStringsDoc.getElementsByTagName('sst')[0].getElementsByTagName('si')).map(si => si.textContent);
@@ -138,12 +130,21 @@ async function getTableRawContentFromXSLXFile(file, unzip, parseXML) {
 
 
 
-/** @typedef {string} SheetName */
+const parser = new DOMParser();
+
+/**
+ * @param {string} str 
+ * @returns {Document}
+ */
+function parseXML(str){
+    return parser.parseFromString(str, 'application/xml');
+}
+
 
 /**
  * 
  * @param {File} file 
- * @returns {Promise<Map<SheetName, TableCellRawContent[][]>>}
+ * @returns {Promise<Map<SheetName, SheetRawContent>>}
  */
 export function getTableRawContentFromFile(file){
     if(file.type === ODS_TYPE)
@@ -159,7 +160,7 @@ export function getTableRawContentFromFile(file){
 
 /**
  * Converts a cell value to the appropriate JavaScript type based on its cell type.
- * @param {TableCellRawContent} _ 
+ * @param {SheetCellRawContent} _ 
  * @returns {number | boolean | string | Date} The converted value.
  */
 function convertCellValue({value, type}) {
@@ -193,37 +194,54 @@ function convertCellValue({value, type}) {
 }
 
 /**
+ * @param {SheetCellRawContent} rawCellContent
+ * @returns {boolean}
+ */
+function isCellNotEmpty({value}){
+    return value !== '' && value !== null && value !== undefined
+}
+
+/**
+ * @param {SheetRowRawContent} rawContentRow 
+ * @returns {boolean}
+ */
+function isRowNotEmpty(rawContentRow){
+    return rawContentRow.some(isCellNotEmpty)
+}
+
+/**
  * 
- * @param {TableCellRawContent[][]} rawContent 
+ * @param {SheetRawContent} rawContent 
  * @returns {any[]}
  */
 function rawContentToObjects(rawContent){
     let [firstRow, ...dataRows] = rawContent
 
     /** @type {string[]} */
-    //@ts-expect-error trust me, this is true after the filter
+    //@ts-expect-error this type is correct after the filter
     const columns = firstRow.filter(({value}) => typeof value === 'string' && value.length >= 1).map(r => r.value)
 
-    return dataRows.map(row => {
+    return dataRows
+    .filter(isRowNotEmpty) // remove empty rows
+    .map(row => {
         const obj = Object.create(null)
-        let empty = true
         columns.forEach((column, i) => {
             const rawValue = row[i]
             obj[column] = rawValue ? convertCellValue(rawValue) : ''
-            empty = empty && (obj[column] === '')
         })
-        return empty ? undefined : obj
-    }).filter(x => x !== undefined) // remove empty rows
+        return obj
+    })
 
 }
 
 
+
 /**
  * 
- * @param {Map<SheetName, TableCellRawContent[][]>} rawContentSheets 
+ * @param {Map<SheetName, SheetRawContent>} rawContentSheets 
  * @returns {Map<SheetName, any[]>}
  */
-export function tableRawContentToObjects(rawContentSheets){
+export function sheetRawContentToObjects(rawContentSheets){
     return new Map(
         [...rawContentSheets].map(([sheetName, rawContent]) => {
             return [sheetName, rawContentToObjects(rawContent)]
