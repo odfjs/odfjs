@@ -1,12 +1,54 @@
-# Front-end template
+# ods-xlsx
 
-This repo is meant to be a template repo. Not useful in itself, but a starter kit for other projects
+Small lib to parse/understand .ods and .xsls files in the browser
 
-A simple theme is already set up
 
-A JavaScript bundler with [svelte](https://svelte.dev/) is set up
+## Usage
 
-Continuous deployment is setup via Github Actions. The continuous deployement builds with `npm run build` then does a `git push origin online`, then triggers a github page build of the `online` branch
+### Install
+
+```sh
+npm i github:DavidBruant/ods-xlsx#v0.2.0
+```
+
+
+### Usage
+
+#### Basic
+
+```js
+import {getTableRawContentFromFile, tableRawContentToObjects} from './main.js'
+
+/**
+ * @param {File} file - a file like the ones you get from an <input type=file>
+ * @return {Promise<any[]>}
+ */ 
+async function getFileData(file){
+    return getTableRawContentFromFile(file)then(tableRawContentToObjects)
+}
+```
+
+The return value is an array of objects where 
+the **keys** are the column names in the first row and 
+the **values** are automatically converted from the .ods or .xlsx files (which type numbers, strings, booleans and dates) 
+to the appropriate JavaScript value
+
+
+#### Low-level
+
+`getTableRawContentFromFile` returns a `Promise` for an array of array of `{value, type}` objects where:
+- `value` is a string or `undefined` or `null` and 
+- `type` is a type defined in the .ods or .xlsx standards
+
+See the `convertCellValue` function in the source code for an example of how to handle the `type` value
+
+
+`tableRawContentToObjects` performs a conversion on values and also removes empty rows
+
+### Demo
+
+https://davidbruant.github.io/ods-xlsx/
+
 
 ## Local dev
 
@@ -18,12 +60,11 @@ npm run dev
 
 ## Expectations and licence
 
-I expect to be credited for the work on this repo
+I hope to be credited for the work on this repo
 
 Everything written by me and contributors to this repo is licenced under **CC0 1.0 (Public Domain)**
 
 
-#### Dependencies
+## Dependencies
 
-Bootstrap reboot is **MIT**-licenced
-Svelte and rollup config are **MIT**-licence
+Svelte and rollup are **MIT**-licence
