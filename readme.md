@@ -24,7 +24,7 @@ import {getTableRawContentFromFile, tableRawContentToObjects} from './main.js'
  * @return {Promise<any[]>}
  */ 
 async function getFileData(file){
-    return getTableRawContentFromFile(file)then(tableRawContentToObjects)
+    return getTableRawContentFromFile(file).then(tableRawContentToObjects)
 }
 ```
 
