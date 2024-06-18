@@ -1,8 +1,25 @@
 <script>
-	import {getTableRawContentFromFile, tableRawContentToObjects} from './main.js'
+	//@ts-check
+
+	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, getXLSXTableRawContent} from './main.js'
 
 	const ODS_TYPE = "application/vnd.oasis.opendocument.spreadsheet";
 	const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+	/**
+	 * 
+	 * @param {File} file 
+	 * @returns {Promise<Map<SheetName, SheetRawContent>>}
+	 */
+	async function getTableRawContentFromFile(file){
+		if(file.type === ODS_TYPE)
+			return getODSTableRawContent(await file.arrayBuffer())
+
+		if(file.type === XLSX_TYPE)
+			return getXLSXTableRawContent(await file.arrayBuffer())
+
+		throw new TypeError(`Unsupported file type: ${file.type} (${file.name})`)
+	}
 
 	let files
 
@@ -11,7 +28,7 @@
 	/** @type {File} */
 	$: file = files && files[0]
 	$: tableRawContent = file && getTableRawContentFromFile(file)
-	$: tableObjectSheets = tableRawContent && tableRawContent.then(tableRawContentToObjects) || []
+	$: tableObjectSheets = tableRawContent && tableRawContent.then(tableWithoutEmptyRows).then(tableRawContentToObjects) || []
 	$: Promise.resolve(tableObjectSheets).then(x => console.log('tableObjectSheets', x))
 
 </script>

@@ -1,6 +1,6 @@
 # ods-xlsx
 
-Small lib to parse/understand .ods and .xsls files in the browser
+Small lib to parse/understand .ods and .xsls files in the browser and node.js
 
 
 ## Usage
@@ -17,14 +17,16 @@ npm i github:DavidBruant/ods-xlsx#v0.2.0
 #### Basic
 
 ```js
-import {getTableRawContentFromFile, tableRawContentToObjects} from './main.js'
+import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent} from 'ods-xlsx'
 
 /**
- * @param {File} file - a file like the ones you get from an <input type=file>
+ * @param {File} file - an .ods file like the ones you get from an <input type=file>
  * @return {Promise<any[]>}
  */ 
 async function getFileData(file){
-    return getTableRawContentFromFile(file).then(tableRawContentToObjects)
+    return tableRawContent
+        .then(tableWithoutEmptyRows)
+        .then(tableRawContentToObjects)
 }
 ```
 
@@ -36,14 +38,7 @@ to the appropriate JavaScript value
 
 #### Low-level
 
-`getTableRawContentFromFile` returns a `Promise` for an array of array of `{value, type}` objects where:
-- `value` is a string or `undefined` or `null` and 
-- `type` is a type defined in the .ods or .xlsx standards
-
-See the `convertCellValue` function in the source code for an example of how to handle the `type` value
-
-
-`tableRawContentToObjects` performs a conversion on values and also removes empty rows
+See exports
 
 ### Demo
 
