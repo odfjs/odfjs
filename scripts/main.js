@@ -3,11 +3,12 @@
 let _DOMParser
 
 if(typeof DOMParser !== 'undefined' && Object(DOMParser) === DOMParser && DOMParser.prototype && typeof DOMParser.prototype.parseFromString === 'function'){
-    console.info('[ods-xlsx] Already existing DOMParser. Certainly in the browser')
+    //console.info('[ods-xlsx] Already existing DOMParser. Certainly in the browser')
+    
     _DOMParser = DOMParser
 }
 else{
-    console.info('[ods-xlsx] No native DOMParser. Certainly in Node.js')
+    //console.info('[ods-xlsx] No native DOMParser. Certainly in Node.js')
 
     const xmldom = await import('@xmldom/xmldom')
     _DOMParser = xmldom.DOMParser
@@ -40,11 +41,22 @@ export function getXLSXTableRawContent(xlsxArrBuff){
 
 
 export {
-    isRowNotEmpty,
     // table-level exports
     tableWithoutEmptyRows,
     tableRawContentToValues,
     tableRawContentToStrings,
     tableRawContentToObjects, 
+
+    // sheet-level exports
+    sheetRawContentToObjects,
+    sheetRawContentToStrings,
+
+    // row-level exports
+    rowRawContentToStrings,
+    isRowNotEmpty,
+
+    // cell-level exports
+    cellRawContentToStrings,
+    convertCellValue
 } from './shared.js'
 

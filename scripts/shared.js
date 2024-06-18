@@ -111,13 +111,12 @@ export async function _getXLSXTableRawContent(arrayBuffer, parseXML) {
     return new Map(await Promise.all(sheetDataPs));
 }
 
-
 /**
  * Converts a cell value to the appropriate JavaScript type based on its cell type.
  * @param {SheetCellRawContent} _ 
  * @returns {number | boolean | string | Date} The converted value.
  */
-function convertCellValue({value, type}) {
+export function convertCellValue({value, type}) {
     if(value === ''){
         return ''
     }
@@ -149,29 +148,8 @@ function convertCellValue({value, type}) {
 
 
 
-/**
- * 
- * @param {SheetRawContent} rawContent 
- * @returns {any[]}
- */
-export function rawContentToObjects(rawContent){
-    let [firstRow, ...dataRows] = rawContent
 
-    /** @type {string[]} */
-    //@ts-expect-error this type is correct after the filter
-    const columns = firstRow.filter(({value}) => typeof value === 'string' && value.length >= 1).map(r => r.value)
 
-    return dataRows
-    .map(row => {
-        const obj = Object.create(null)
-        columns.forEach((column, i) => {
-            const rawValue = row[i]
-            obj[column] = rawValue ? convertCellValue(rawValue) : ''
-        })
-        return obj
-    })
-
-}
 
 
 /**
@@ -192,6 +170,37 @@ export function tableRawContentToValues(rawContentSheets){
 }
 
 /**
+ * Convert values to strings
+ */
+
+/**
+ * 
+ * @param {SheetCellRawContent} rawContentCell
+ * @returns {string}
+ */
+export function cellRawContentToStrings(rawContentCell){
+    return rawContentCell.value || ''
+}
+
+/**
+ * 
+ * @param {SheetRowRawContent} rawContentRow 
+ * @returns {string[]}
+ */
+export function rowRawContentToStrings(rawContentRow){
+    return rawContentRow.map(cellRawContentToStrings)
+}
+
+/**
+ * 
+ * @param {SheetRawContent} rawContentSheet 
+ * @returns {string[][]}
+ */
+export function sheetRawContentToStrings(rawContentSheet){
+    return rawContentSheet.map(rowRawContentToStrings)
+}
+
+/**
  * 
  * @param {Map<SheetName, SheetRawContent>} rawContentSheets 
  * @returns {Map<SheetName, string[][]>}
@@ -199,16 +208,44 @@ export function tableRawContentToValues(rawContentSheets){
 export function tableRawContentToStrings(rawContentSheets){
     return new Map(
         [...rawContentSheets].map(([sheetName, rawContent]) => {
-            return [
-                sheetName, 
-                rawContent
-                    .map(row => row.map(c => (c.value || '')))
-            ]
+            return [ sheetName, sheetRawContentToStrings(rawContent) ]
         })
     )
 }
 
 
+
+
+
+/**
+ * Convert rows to objects
+ */
+
+/**
+ * This function expects the first row to contain string values which are used as column names
+ * It outputs an array of objects which keys are 
+ *
+ * @param {SheetRawContent} rawContent 
+ * @returns {any[]}
+ */
+export function sheetRawContentToObjects(rawContent){
+    let [firstRow, ...dataRows] = rawContent
+
+    /** @type {string[]} */
+    //@ts-expect-error this type is correct after the filter
+    const columns = firstRow.filter(({value}) => typeof value === 'string' && value.length >= 1).map(r => r.value)
+
+    return dataRows
+    .map(row => {
+        const obj = Object.create(null)
+        columns.forEach((column, i) => {
+            const rawValue = row[i]
+            obj[column] = rawValue ? convertCellValue(rawValue) : ''
+        })
+        return obj
+    })
+
+}
 
 /**
  * 
@@ -218,11 +255,17 @@ export function tableRawContentToStrings(rawContentSheets){
 export function tableRawContentToObjects(rawContentSheets){
     return new Map(
         [...rawContentSheets].map(([sheetName, rawContent]) => {
-            return [sheetName, rawContentToObjects(rawContent)]
+            return [sheetName, sheetRawContentToObjects(rawContent)]
         })
     )
 }
 
+
+
+
+/**
+ * Emptiness
+ */
 
 /**
  * @param {SheetCellRawContent} rawCellContent
