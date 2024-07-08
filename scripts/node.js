@@ -1,21 +1,9 @@
 //@ts-check
 
-let _DOMParser
-
-if(typeof DOMParser !== 'undefined' && Object(DOMParser) === DOMParser && DOMParser.prototype && typeof DOMParser.prototype.parseFromString === 'function'){
-    //console.info('[ods-xlsx] Already existing DOMParser. Certainly in the browser')
-    
-    _DOMParser = DOMParser
-}
-else{
-    //console.info('[ods-xlsx] No native DOMParser. Certainly in Node.js')
-
-    const xmldom = await import('@xmldom/xmldom')
-    _DOMParser = xmldom.DOMParser
-}
+import {DOMParser} from '@xmldom/xmldom'
 
 function parseXML(str){
-    return (new _DOMParser()).parseFromString(str, 'application/xml');
+    return (new DOMParser()).parseFromString(str, 'application/xml');
 }
 
 import {

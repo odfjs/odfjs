@@ -2,7 +2,8 @@
   "name": "ods-xlsx",
   "version": "0.5.0",
   "type": "module",
-  "main": "./scripts/main.js",
+  "main": "./scripts/node.js",
+  "browser": "./scripts/browser.js",
   "scripts": {
     "build": "rollup -c",
     "dev": "npm-run-all --parallel dev:* start",

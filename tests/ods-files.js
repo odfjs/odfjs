@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 import test from 'ava';
 
-import {getODSTableRawContent} from '../scripts/main.js'
+import {getODSTableRawContent} from '../scripts/node.js'
 
 test('.ods file with table:number-columns-repeated attribute in cell', async t => {
     const repeatedCellFileContent = (await readFile('./tests/data/cellules-répétées.ods')).buffer

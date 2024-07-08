@@ -1,7 +1,7 @@
 <script>
 	//@ts-check
 
-	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, getXLSXTableRawContent} from './main.js'
+	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, getXLSXTableRawContent} from './browser.js'
 
 	const ODS_TYPE = "application/vnd.oasis.opendocument.spreadsheet";
 	const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
