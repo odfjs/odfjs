@@ -99,11 +99,11 @@ export async function _getXLSXTableRawContent(arrayBuffer, parseXML) {
             const rows = sheetDoc.getElementsByTagName('sheetData')[0].getElementsByTagName('row');
             const sheetData = [];
 
-            for (let row of rows) {
+            for (let row of Array.from(rows)) {
                 const cells = row.getElementsByTagName('c');
                 const rowData = [];
 
-                for (let cell of cells) {
+                for (let cell of Array.from(cells)) {
                     const cellType = cell.getAttribute('t') || 'n';
                     let cellValue = cell.getElementsByTagName('v')[0]?.textContent || '';
 
