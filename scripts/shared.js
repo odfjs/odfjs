@@ -32,11 +32,26 @@ export async function _getODSTableRawContent(arrayBuffer, parseXML) {
 
             for (let cell of Array.from(cells)) {
                 const cellType = cell.getAttribute('office:value-type');
-                const cellValue = cellType === 'string' ? cell.textContent : cell.getAttribute('office:value');
-                rowData.push({
-                    value: cellValue,
-                    type: cellType
-                });
+                let cellValue;
+
+                if (cellType === 'string') {
+                    cellValue = cell.textContent;
+                } else if (cellType === 'date') {
+                    cellValue = cell.getAttribute('office:date-value');
+                } else {
+                    cellValue = cell.getAttribute('office:value');
+                }
+
+                const numberOfColumnsRepeated = cell.getAttribute('table:number-columns-repeated');
+                const repeatCount = numberOfColumnsRepeated ? parseInt(numberOfColumnsRepeated, 10) : 1;
+                if(repeatCount < 100){ // ignore excessive repetitions
+                    for (let i = 0; i < repeatCount; i++) {
+                        rowData.push({
+                            value: cellValue,
+                            type: cellType
+                        });
+                    }
+                }
             }
 
             sheetData.push(rowData);
@@ -47,6 +62,7 @@ export async function _getODSTableRawContent(arrayBuffer, parseXML) {
 
     return tableMap;
 }
+
 
 /**
  * Extracts raw table content from an XLSX file.
@@ -83,11 +99,11 @@ export async function _getXLSXTableRawContent(arrayBuffer, parseXML) {
             const rows = sheetDoc.getElementsByTagName('sheetData')[0].getElementsByTagName('row');
             const sheetData = [];
 
-            for (let row of rows) {
+            for (let row of Array.from(rows)) {
                 const cells = row.getElementsByTagName('c');
                 const rowData = [];
 
-                for (let cell of cells) {
+                for (let cell of Array.from(cells)) {
                     const cellType = cell.getAttribute('t') || 'n';
                     let cellValue = cell.getElementsByTagName('v')[0]?.textContent || '';
 
