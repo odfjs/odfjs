@@ -8,7 +8,7 @@ Small lib to parse/understand .ods and .xsls files in the browser and node.js
 ### Install
 
 ```sh
-npm i github:DavidBruant/ods-xlsx#v0.5.0
+npm i https://github.com/DavidBruant/ods-xlsx.git#v0.6.0
 ```
 
 
