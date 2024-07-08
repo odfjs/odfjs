@@ -11,7 +11,6 @@ test('.ods file with table:number-columns-repeated attribute in cell', async t =
 
     const feuille1 = table.get('Feuille 1')
 
-    console.log('yo repeated', feuille1)
     t.deepEqual(feuille1[0].length, feuille1[1].length, `First and second row should have the same number of columns`)
 });
 
@@ -22,8 +21,6 @@ test('.ods cells with dates should be recognized', async t => {
 	const table = await getODSTableRawContent(odsFileWithDates);
 
     const feuille1 = table.get('Feuille1')
-
-    console.log('yo dates', feuille1)
 
     const row1 = feuille1[0]
     t.deepEqual(row1[0].value, 'Nom')
