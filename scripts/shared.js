@@ -248,8 +248,14 @@ export function sheetRawContentToObjects(rawContent){
     let [firstRow, ...dataRows] = rawContent
 
     /** @type {string[]} */
-    //@ts-expect-error this type is correct after the filter
-    const columns = firstRow.filter(({value}) => typeof value === 'string' && value.length >= 1).map(r => r.value)
+    
+    const columns = firstRow.map((r, i) => {
+        if (r.value === undefined || r.value === null || r.value === "") {
+            return `Column ${i+1}`
+        }
+
+        return r.value
+    })
 
     return dataRows
     .map(row => {
