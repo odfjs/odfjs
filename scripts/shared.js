@@ -3,6 +3,44 @@ import { unzip } from 'unzipit';
 
 import './types.js'
 
+// https://dom.spec.whatwg.org/#interface-node
+const TEXT_NODE = 3
+
+/**
+ * 
+ * @param {Element} cell 
+ * @returns {string}
+ */
+function extraxtODSCellText(cell) {
+    let text = '';
+    const childNodes = cell.childNodes;
+
+    for (const child of Array.from(childNodes)) {
+        if (child.nodeType === TEXT_NODE) {
+            // Direct text node, append the text directly
+            text += child.nodeValue;
+        } else if (child.nodeName === 'text:p') {
+            if (text.length > 0) {
+                // Add a newline before appending new paragraph if text already exists
+                text += '\n';
+            }
+            const pNodes = child.childNodes;
+            for (const pChild of Array.from(pNodes)) {
+                if (pChild.nodeType === TEXT_NODE) {
+                    text += pChild.nodeValue;  // Append text inside <text:p>
+                } else if (pChild.nodeName === 'text:line-break') {
+                    text += '\n';  // Append newline for <text:line-break />
+                }
+            }
+        } else if (child.nodeName === 'text:line-break') {
+            text += '\n';  // Append newline for <text:line-break /> directly under <table:table-cell>
+        }
+    }
+    
+    return text.trim();
+}
+
+
 /**
  * Extracts raw table content from an ODS file.
  * @param {ArrayBuffer} arrayBuffer - The ODS file.
@@ -35,7 +73,7 @@ export async function _getODSTableRawContent(arrayBuffer, parseXML) {
                 let cellValue;
 
                 if (cellType === 'string') {
-                    cellValue = cell.textContent;
+                    cellValue = extraxtODSCellText(cell)
                 } else if (cellType === 'date') {
                     cellValue = cell.getAttribute('office:date-value');
                 } else {
