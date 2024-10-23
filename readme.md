@@ -69,6 +69,8 @@ const ods = await createOdsFile(content)
 // ods is an ArrayBuffer representing an ods file with the content described by the Map
 ```
 
+(and there is a tool to test file creation:
+`node tools/create-an-ods-file.js > yo.ods`)
 
 #### Low-level
 
