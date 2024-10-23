@@ -9,3 +9,5 @@
 /** @typedef {SheetRowRawContent[]} SheetRawContent */
 
 /** @typedef {string} SheetName */
+
+export {}

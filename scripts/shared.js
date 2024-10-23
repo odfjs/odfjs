@@ -1,7 +1,7 @@
 //@ts-check
 import { unzip } from 'unzipit';
 
-import './types.js'
+/** @import {SheetName, SheetRawContent, SheetRowRawContent, SheetCellRawContent} from './types.js' */
 
 // https://dom.spec.whatwg.org/#interface-node
 const TEXT_NODE = 3
@@ -44,7 +44,7 @@ function extraxtODSCellText(cell) {
 /**
  * Extracts raw table content from an ODS file.
  * @param {ArrayBuffer} arrayBuffer - The ODS file.
- * @param {(str: String) => Document} parseXML - Function to parse XML content.
+ * @param {(str: string) => Document} parseXML - Function to parse XML content.
  * @returns {Promise<Map<SheetName, SheetRawContent>>}
  */
 export async function _getODSTableRawContent(arrayBuffer, parseXML) {
@@ -105,7 +105,7 @@ export async function _getODSTableRawContent(arrayBuffer, parseXML) {
 /**
  * Extracts raw table content from an XLSX file.
  * @param {ArrayBuffer} arrayBuffer - The XLSX file.
- * @param {(str: String) => Document} parseXML - Function to parse XML content.
+ * @param {(str: string) => Document} parseXML - Function to parse XML content.
  * @returns {Promise<Map<SheetName, SheetRawContent>>}
  */
 export async function _getXLSXTableRawContent(arrayBuffer, parseXML) {

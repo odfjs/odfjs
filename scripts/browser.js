@@ -1,13 +1,14 @@
 //@ts-check
 
-function parseXML(str){
-    return (new DOMParser()).parseFromString(str, 'application/xml');
-}
-
 import {
     _getODSTableRawContent, 
     _getXLSXTableRawContent
 } from './shared.js'
+
+
+function parseXML(str){
+    return (new DOMParser()).parseFromString(str, 'application/xml');
+}
 
 /**
  * @param {ArrayBuffer} odsArrBuff
@@ -25,6 +26,8 @@ export function getXLSXTableRawContent(xlsxArrBuff){
     return _getXLSXTableRawContent(xlsxArrBuff, parseXML)
 }
 
+
+export {createOdsFile} from './createOdsFile.js'
 
 export {
     // table-level exports
