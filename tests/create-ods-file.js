@@ -2,7 +2,10 @@ import test from 'ava';
 
 import {getODSTableRawContent, createOdsFile} from '../scripts/node.js'
 
+/** @import {SheetName, SheetRawContent} from '../scripts/types.js' */
+
 test('basic file creation', async t => {
+    /** @type {Map<SheetName, SheetRawContent>} */
 	const content = new Map([
         [
             'La feuille', 
@@ -15,7 +18,7 @@ test('basic file creation', async t => {
         ]
     ])
 
-    // @ts-ignore
+    
     const odsFile = await createOdsFile(content)
 
     const parsedContent = await getODSTableRawContent(odsFile)

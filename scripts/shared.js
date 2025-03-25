@@ -1,7 +1,9 @@
 //@ts-check
-import { unzip } from 'unzipit';
+import { Uint8ArrayReader, ZipReader, TextWriter } from '@zip.js/zip.js';
 
+/** @import {Entry} from '@zip.js/zip.js'*/
 /** @import {SheetName, SheetRawContent, SheetRowRawContent, SheetCellRawContent} from './types.js' */
+
 
 // https://dom.spec.whatwg.org/#interface-node
 const TEXT_NODE = 3
@@ -48,11 +50,30 @@ function extraxtODSCellText(cell) {
  * @returns {Promise<Map<SheetName, SheetRawContent>>}
  */
 export async function _getODSTableRawContent(arrayBuffer, parseXML) {
-    const zip = await unzip(arrayBuffer);
-    const entries = zip.entries;
+    const zipDataReader = new Uint8ArrayReader(new Uint8Array(arrayBuffer));
+    const zipReader = new ZipReader(zipDataReader);
+    const zipEntries = await zipReader.getEntries()
+    await zipReader.close();
+
+    /** @type {Map<Entry['filename'], Entry>} */
+    const entryByFilename = new Map()
+    for(const entry of zipEntries){
+        const filename = entry.filename
+        entryByFilename.set(filename, entry)
+    }
+
+    const contentXmlEntry = entryByFilename.get('content.xml')
+
+    if(!contentXmlEntry){
+        throw new TypeError(`entry 'content.xml' manquante dans le zip`)
+    }
 
     // Extract the content.xml file which contains the spreadsheet data
-    const contentXml = await entries['content.xml'].text();
+
+    //@ts-ignore
+    const contentXml = await contentXmlEntry.getData(new TextWriter());
+    //console.log('contentXml', contentXml);
+
     const contentDoc = parseXML(contentXml);
 
     const tableMap = new Map();
@@ -109,29 +130,61 @@ export async function _getODSTableRawContent(arrayBuffer, parseXML) {
  * @returns {Promise<Map<SheetName, SheetRawContent>>}
  */
 export async function _getXLSXTableRawContent(arrayBuffer, parseXML) {
-    const zip = await unzip(arrayBuffer);
-    const entries = zip.entries;
+    const zipDataReader = new Uint8ArrayReader(new Uint8Array(arrayBuffer));
+    const zipReader = new ZipReader(zipDataReader);
+    const zipEntries = await zipReader.getEntries()
+    await zipReader.close();
 
-    const sharedStringsXml = await entries['xl/sharedStrings.xml'].text();
+    /** @type {Map<Entry['filename'], Entry>} */
+    const entryByFilename = new Map()
+    for(const entry of zipEntries){
+        const filename = entry.filename
+        entryByFilename.set(filename, entry)
+    }
+
+    const sharedStringsEntry = entryByFilename.get('xl/sharedStrings.xml')
+
+    if(!sharedStringsEntry){
+        throw new TypeError(`entry 'xl/sharedStrings.xml' manquante dans le zip`)
+    }
+
+    //@ts-ignore
+    const sharedStringsXml = await sharedStringsEntry.getData(new TextWriter());
+
     const sharedStringsDoc = parseXML(sharedStringsXml);
     const sharedStrings = Array.from(sharedStringsDoc.getElementsByTagName('sst')[0].getElementsByTagName('si')).map(si => si.textContent);
 
     // Get sheet names and their corresponding XML files
-    const workbookXml = await entries['xl/workbook.xml'].text();
+    const workbookEntry = entryByFilename.get('xl/workbook.xml')
+
+    if(!workbookEntry){
+        throw new TypeError(`entry 'xl/workbook.xml' manquante dans le zip`)
+    }
+
+    //@ts-ignore
+    const workbookXml = await workbookEntry.getData(new TextWriter());
     const workbookDoc = parseXML(workbookXml);
     const sheets = Array.from(workbookDoc.getElementsByTagName('sheets')[0].getElementsByTagName('sheet'));
     const sheetNames = sheets.map(sheet => sheet.getAttribute('name'));
     const sheetIds = sheets.map(sheet => sheet.getAttribute('r:id'));
 
     // Read the relations to get the actual filenames for each sheet
-    const workbookRelsXml = await entries['xl/_rels/workbook.xml.rels'].text();
+    const workbookRelsEntry = entryByFilename.get('xl/_rels/workbook.xml.rels')
+
+    if(!workbookRelsEntry){
+        throw new TypeError(`entry 'xl/_rels/workbook.xml.rels' manquante dans le zip`)
+    }
+
+    //@ts-ignore
+    const workbookRelsXml = await workbookRelsEntry.getData(new TextWriter());
     const workbookRelsDoc = parseXML(workbookRelsXml);
     const sheetRels = Array.from(workbookRelsDoc.getElementsByTagName('Relationship'));
     const sheetFiles = sheetIds.map(id => sheetRels.find(rel => rel.getAttribute('Id') === id).getAttribute('Target').replace('worksheets/', ''));
 
     // Read each sheet's XML and extract data in parallel
     const sheetDataPs = sheetFiles.map((sheetFile, index) => (
-        entries[`xl/worksheets/${sheetFile}`].text().then(sheetXml => {
+        // @ts-ignore
+        entryByFilename.get(`xl/worksheets/${sheetFile}`).getData(new TextWriter()).then(sheetXml => {
             const sheetDoc = parseXML(sheetXml);
 
             const rows = sheetDoc.getElementsByTagName('sheetData')[0].getElementsByTagName('row');

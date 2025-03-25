@@ -4,6 +4,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import terser from '@rollup/plugin-terser';
 import css from 'rollup-plugin-css-only';
 import sveltePreprocess from 'svelte-preprocess'
+import { visualizer } from "rollup-plugin-visualizer";
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -37,6 +38,7 @@ export default {
 		}),
 		commonjs(),
 
+		visualizer(),
 		// If we're building for production (npm run build
 		// instead of npm run dev), minify
 		//production && terser()

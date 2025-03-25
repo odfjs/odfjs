@@ -21,13 +21,13 @@
     "rollup": "^4.18.0",
     "rollup-plugin-css-only": "^4.5.2",
     "rollup-plugin-svelte": "^7.1.6",
+    "rollup-plugin-visualizer": "^5.14.0",
     "sass": "^1.58.3",
     "svelte": "^4.2.9",
     "svelte-preprocess": "^5.1.3"
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.8.10",
-    "unzipit": "^1.4.3",
-    "xlsx": "^0.18.5"
+    "@zip.js/zip.js": "^2.7.57"
   }
 }

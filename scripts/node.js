@@ -1,11 +1,14 @@
 //@ts-check
 
-import {DOMParser} from '@xmldom/xmldom'
+import {DOMParser, DOMImplementation, XMLSerializer} from '@xmldom/xmldom'
 
 import {
     _getODSTableRawContent, 
     _getXLSXTableRawContent
 } from './shared.js'
+import { _createOdsFile } from './createOdsFile.js'
+
+/** @import {SheetCellRawContent, SheetName, SheetRawContent} from './types.js' */
 
 
 function parseXML(str){
@@ -29,7 +32,27 @@ export function getXLSXTableRawContent(xlsxArrBuff){
     return _getXLSXTableRawContent(xlsxArrBuff, parseXML)
 }
 
-export {createOdsFile} from './createOdsFile.js'
+const implementation = new DOMImplementation()
+
+/** @type { typeof DOMImplementation.prototype.createDocument } */
+const createDocument = function createDocument(...args){
+    // @ts-ignore
+    return implementation.createDocument(...args)
+}
+
+const serializer = new XMLSerializer()
+
+/** @type { typeof XMLSerializer.prototype.serializeToString } */
+const serializeToString = function serializeToString(node){
+    return serializer.serializeToString(node)
+}
+
+/**
+ * @param {Map<SheetName, SheetRawContent>} sheetsData
+ */
+export function createOdsFile(sheetsData){
+    return _createOdsFile(sheetsData, createDocument, serializeToString)
+}
 
 export {
     // table-level exports

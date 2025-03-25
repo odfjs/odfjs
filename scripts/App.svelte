@@ -1,7 +1,7 @@
 <script>
 	//@ts-check
 
-	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, getXLSXTableRawContent} from './browser.js'
+	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, getXLSXTableRawContent, createOdsFile} from './browser.js'
 
 	const ODS_TYPE = "application/vnd.oasis.opendocument.spreadsheet";
 	const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -30,6 +30,9 @@
 	$: tableRawContent = file && getTableRawContentFromFile(file)
 	$: tableObjectSheets = tableRawContent && tableRawContent.then(tableWithoutEmptyRows).then(tableRawContentToObjects) || []
 	$: Promise.resolve(tableObjectSheets).then(x => console.log('tableObjectSheets', x))
+
+	// ligne inutile qui utilise createOdsFile pour l'importer dans le bundle
+	$: tableRawContent && tableRawContent.then(createOdsFile).then(ab => console.log('length', ab.byteLength))
 
 </script>
 
