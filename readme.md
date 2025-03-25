@@ -8,7 +8,7 @@ Small lib to parse/understand .ods and .xsls files in the browser and node.js
 ### Install
 
 ```sh
-npm i https://github.com/DavidBruant/ods-xlsx.git#v0.10.0
+npm i https://github.com/DavidBruant/ods-xlsx.git#v0.11.0
 ```
 
 
@@ -95,7 +95,3 @@ I hope to be credited for the work on this repo
 
 Everything written by me and contributors to this repo is licenced under **CC0 1.0 (Public Domain)**
 
-
-## Dependencies
-
-Svelte and rollup are **MIT**-licence
