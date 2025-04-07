@@ -30,6 +30,9 @@ export async function _createOdsFile(sheetsData, createDocument, serializeToStri
     // Create a new zip writer
     const zipWriter = new ZipWriter(new BlobWriter('application/vnd.oasis.opendocument.spreadsheet'));
 
+    // The “mimetype” file shall be the first file of the zip file. 
+    // It shall not be compressed, and it shall not use an 'extra field' in its header.
+    // https://docs.oasis-open.org/office/OpenDocument/v1.3/os/part2-packages/OpenDocument-v1.3-os-part2-packages.html#__RefHeading__752809_826425813
     zipWriter.add(
         "mimetype",
         new TextReader("application/vnd.oasis.opendocument.spreadsheet"),

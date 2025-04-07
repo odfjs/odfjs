@@ -7,7 +7,11 @@ import {
 
 import {_createOdsFile} from './createOdsFile.js'
 
+import _fillOdtTemplate from './odf/fillOdtTemplate.js'
+
+
 /** @import {SheetCellRawContent, SheetName, SheetRawContent} from './types.js' */
+/** @import {ODTFile} from './odf/fillOdtTemplate.js' */
 
 
 function parseXML(str){
@@ -43,6 +47,16 @@ const serializer = new XMLSerializer()
 const serializeToString = function serializeToString(node){
     return serializer.serializeToString(node)
 }
+
+/**
+ * @param {ODTFile} odtTemplate
+ * @param {any} data 
+ * @returns {Promise<ODTFile>}
+ */
+export function fillOdtTemplate(odtTemplate, data){
+    return _fillOdtTemplate(odtTemplate, data, parseXML, serializeToString, Node)
+}
+
 
 /**
  * @param {Map<SheetName, SheetRawContent>} sheetsData

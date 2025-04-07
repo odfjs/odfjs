@@ -1,6 +1,6 @@
 //@ts-check
 
-import {DOMParser, DOMImplementation, XMLSerializer} from '@xmldom/xmldom'
+import {DOMParser, DOMImplementation, XMLSerializer, Node} from '@xmldom/xmldom'
 
 import {
     _getODSTableRawContent, 
@@ -8,9 +8,17 @@ import {
 } from './shared.js'
 import { _createOdsFile } from './createOdsFile.js'
 
+import _fillOdtTemplate from './odf/fillOdtTemplate.js'
+
 /** @import {SheetCellRawContent, SheetName, SheetRawContent} from './types.js' */
+/** @import {ODTFile} from './odf/fillOdtTemplate.js' */
 
 
+/**
+ * 
+ * @param {string} str 
+ * @returns {Document}
+ */
 function parseXML(str){
     return (new DOMParser()).parseFromString(str, 'application/xml');
 }
@@ -46,6 +54,16 @@ const serializer = new XMLSerializer()
 const serializeToString = function serializeToString(node){
     return serializer.serializeToString(node)
 }
+
+/**
+ * @param {ODTFile} odtTemplate
+ * @param {any} data 
+ * @returns {Promise<ODTFile>}
+ */
+export function fillOdtTemplate(odtTemplate, data){
+    return _fillOdtTemplate(odtTemplate, data, parseXML, serializeToString, Node)
+}
+
 
 /**
  * @param {Map<SheetName, SheetRawContent>} sheetsData
