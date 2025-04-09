@@ -5,7 +5,7 @@ Small lib to parse/understand .ods and .xsls files in the browser and node.js
 
 ## Rough roadmap
 
-- [ ] add odt templating
+- [x] add odt templating
 - [ ] remove support for xlsx
 - [ ] add a .ods minifyer
 - [ ] add a generic .ods visualizer
@@ -18,7 +18,7 @@ Small lib to parse/understand .ods and .xsls files in the browser and node.js
 ### Install
 
 ```sh
-npm i https://github.com/DavidBruant/ods-xlsx.git#v0.12.0
+npm i https://github.com/DavidBruant/ods-xlsx.git#v0.13.0
 ```
 
 
