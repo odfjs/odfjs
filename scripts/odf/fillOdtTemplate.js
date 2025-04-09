@@ -1,11 +1,10 @@
 import { ZipReader, ZipWriter, BlobReader, BlobWriter, TextReader, Uint8ArrayReader, TextWriter, Uint8ArrayWriter } from '@zip.js/zip.js';
 
 import {traverse} from '../DOMUtils.js'
-import makeManifestFile from './makeManifestFile.js';
+import {makeManifestFile, getManifestFileData} from './manifest.js';
 
-// fillOdtTemplate, getOdtTemplate, getOdtTextContent
-
-/** @import {ODFManifest} from './makeManifestFile.js' */
+/** @import {Reader, ZipWriterAddDataOptions} from '@zip.js/zip.js' */
+/** @import {ODFManifest} from './manifest.js' */
 
 /** @typedef {ArrayBuffer} ODTFile */
 
@@ -329,6 +328,18 @@ function fillTemplatedOdtElement(rootElement, data, Node){
 }
 
 
+const keptFiles = new Set(['content.xml', 'styles.xml', 'mimetype', 'META-INF/manifest.xml'])
+
+
+/**
+ * 
+ * @param {string} filename 
+ * @returns {boolean}
+ */
+function keepFile(filename){
+    return keptFiles.has(filename) || filename.startsWith('Pictures/')
+}
+
 
 /**
  * @param {ODTFile} odtTemplate
@@ -349,27 +360,25 @@ export default async function _fillOdtTemplate(odtTemplate, data, parseXML, seri
     const writer = new ZipWriter(new Uint8ArrayWriter());
 
     /** @type {ODFManifest} */
-    const manifestFileData = {
-        mediaType: ODTMimetype,
-        version: '1.3', // default, but may be changed
-        fileEntries: []
-    }
+    let manifestFileData;
 
-    const keptFiles = new Set(['content.xml', 'styles.xml', 'mimetype'])
-
+    /** @type {{filename: string, content: Reader, options?: ZipWriterAddDataOptions}[]} */
+    const zipEntriesToAdd = []
 
     // Parcourir chaque entrée du fichier ODT
     for await (const entry of entries) {
         const filename = entry.filename
 
+        //console.log('entry', filename, entry.directory)
+
         // remove other files
-        if(!keptFiles.has(filename)){
+        if(!keepFile(filename)){
             // ignore, do not create a corresponding entry in the new zip
         }
         else{
-            let content;
-            let options;
-            
+            let content
+            let options
+
             switch(filename){
                 case 'mimetype':
                     content = new TextReader(ODTMimetype)
@@ -379,22 +388,16 @@ export default async function _fillOdtTemplate(odtTemplate, data, parseXML, seri
                         dataDescriptor: false,
                         extendedTimestamp: false,
                     }
+                    
+                    zipEntriesToAdd.push({filename, content, options})
+
                     break;
                 case 'content.xml':
+                    // @ts-ignore
                     const contentXml = await entry.getData(new TextWriter());
                     const contentDocument = parseXML(contentXml);
                     fillTemplatedOdtElement(contentDocument, data, Node) 
                     const updatedContentXml = serializeToString(contentDocument)
-
-                    const docContentElement = contentDocument.getElementsByTagName('office:document-content')[0]
-                    const version = docContentElement.getAttribute('office:version')
-                    
-                    //console.log('version', version)
-                    manifestFileData.version = version 
-                    manifestFileData.fileEntries.push({
-                        fullPath: filename,
-                        mediaType: 'text/xml'
-                    })
 
                     content = new TextReader(updatedContentXml)
                     options = {
@@ -402,26 +405,48 @@ export default async function _fillOdtTemplate(odtTemplate, data, parseXML, seri
                         level: 9
                     };
                     
+                    zipEntriesToAdd.push({filename, content, options})
+
                     break;
+                
+                case 'META-INF/manifest.xml':
+                    // @ts-ignore
+                    const manifestXml = await entry.getData(new TextWriter());
+                    const manifestDocument = parseXML(manifestXml);
+                    manifestFileData = getManifestFileData(manifestDocument)
+
+                    break;
+
                 case 'styles.xml':
+                default:
                     const blobWriter = new BlobWriter();
+                    // @ts-ignore
                     await entry.getData(blobWriter);
                     const blob = await blobWriter.getData();
-        
-                    manifestFileData.fileEntries.push({
-                        fullPath: filename,
-                        mediaType: 'text/xml'
-                    })
 
                     content = new BlobReader(blob)
+                    zipEntriesToAdd.push({filename, content})
                     break;
-                default:
-                    throw new Error(`Unexpected file (${filename})`)
             }
-
-            await writer.add(filename, content, options);
         }
+    }
 
+
+    for(const {filename, content, options} of zipEntriesToAdd){
+        await writer.add(filename, content, options);
+    }
+
+    const newZipFilenames = new Set(zipEntriesToAdd.map(ze => ze.filename))
+
+    if(!manifestFileData){
+        throw new Error(`'META-INF/manifest.xml' zip entry missing`)
+    }
+
+    // remove ignored files from manifest.xml
+    for(const filename of manifestFileData.fileEntries.keys()){
+        if(!newZipFilenames.has(filename)){
+            manifestFileData.fileEntries.delete(filename)
+        }
     }
 
     const manifestFileXml = makeManifestFile(manifestFileData)
