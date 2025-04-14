@@ -1,6 +1,6 @@
-# ods-xlsx
+# @odfjs/odfjs
 
-Small lib to parse/understand .ods and .xsls files in the browser and node.js
+Small lib to parse/understand .odf files (.odt, .ods) in the browser and node.js
 
 
 ## Rough roadmap
