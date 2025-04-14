@@ -1,5 +1,5 @@
 {
-  "name": "ods-xlsx",
+  "name": "@odfjs/odfjs",
   "version": "0.13.0",
   "type": "module",
   "main": "./scripts/node.js",
@@ -10,6 +10,9 @@
     "dev:rollup": "rollup -c -w",
     "start": "http-server -c-1 .",
     "test": "ava"
+  },
+  "repository": {
+    "url": "https://github.com/odfjs/odfjs.git"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.7",

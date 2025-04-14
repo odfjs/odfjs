@@ -39,8 +39,47 @@ const data = {
     ]
 }*/
 
-
 /*
+const templatePath = join(import.meta.dirname, '../tests/data/légumes-de-saison.odt')
+const data = {
+    légumesSaison : [
+        {
+            saison: 'Printemps',
+            légumes: [
+                'Asperge',
+                'Betterave',
+                'Blette'
+            ]
+        },
+        {
+            saison: 'Été',
+            légumes: [
+                'Courgette',
+                'Poivron',
+                'Laitue'
+            ]
+        },
+        {
+            saison: 'Automne',
+            légumes: [
+                'Poireau',
+                'Potiron',
+                'Brocoli'
+            ]
+        },
+        {
+            saison: 'Hiver',
+            légumes: [
+                'Radis',
+                'Chou de Bruxelles',
+                'Frisée'
+            ]
+        }
+    ]
+}
+*/
+
+
 const templatePath = join(import.meta.dirname, '../tests/data/tableau-simple.odt')
 const data = {
     annéeConsos : [
@@ -52,13 +91,16 @@ const data = {
         { année: 2020, conso: 37859.246},
     ]
 }
-*/
 
+
+
+/*
 const templatePath = join(import.meta.dirname, '../tests/data/template-avec-image.odt')
 
 const data = {
     commentaire : `J'adooooooore 🤩 West covinaaaaaaaaaaa 🎶`
 }
+*/
 
 const odtTemplate = await getOdtTemplate(templatePath)
 const odtResult = await fillOdtTemplate(odtTemplate, data)
