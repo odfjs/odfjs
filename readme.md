@@ -25,7 +25,7 @@ npm i https://github.com/odfjs/odfjs.git#v0.14.0
 ### Basic - reading an ods/xlsx file
 
 ```js
-import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent} from 'ods-xlsx'
+import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent} from '@odfjs/odfjs'
 
 /**
  * @param {ArrayBuffer} odsFile - content of an .ods file
