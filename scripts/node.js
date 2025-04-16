@@ -2,10 +2,7 @@
 
 import {DOMParser, DOMImplementation, XMLSerializer, Node} from '@xmldom/xmldom'
 
-import {
-    _getODSTableRawContent, 
-    _getXLSXTableRawContent
-} from './shared.js'
+import {_getODSTableRawContent} from './shared.js'
 import { _createOdsFile } from './createOdsFile.js'
 
 import _fillOdtTemplate from './odf/fillOdtTemplate.js'
@@ -32,13 +29,6 @@ export function getODSTableRawContent(odsArrBuff){
     return _getODSTableRawContent(odsArrBuff, parseXML)
 }
 
-/**
- * @param {ArrayBuffer} xlsxArrBuff
- * @returns {ReturnType<_getXLSXTableRawContent>}
- */
-export function getXLSXTableRawContent(xlsxArrBuff){
-    return _getXLSXTableRawContent(xlsxArrBuff, parseXML)
-}
 
 const implementation = new DOMImplementation()
 

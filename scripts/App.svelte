@@ -1,10 +1,11 @@
 <script>
-	//@ts-check
+	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, createOdsFile} from './browser.js'
 
-	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, getXLSXTableRawContent, createOdsFile} from './browser.js'
+	/** @import {SheetName, SheetRawContent} from './types.js' */
 
 	const ODS_TYPE = "application/vnd.oasis.opendocument.spreadsheet";
-	const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
 
 	/**
 	 * 
@@ -14,9 +15,6 @@
 	async function getTableRawContentFromFile(file){
 		if(file.type === ODS_TYPE)
 			return getODSTableRawContent(await file.arrayBuffer())
-
-		if(file.type === XLSX_TYPE)
-			return getXLSXTableRawContent(await file.arrayBuffer())
 
 		throw new TypeError(`Unsupported file type: ${file.type} (${file.name})`)
 	}
@@ -42,7 +40,7 @@
 	<h2>Import</h2>
 	<label>
 		Fichier à importer:
-		<input bind:files type="file" id="file-input" accept="{ ['.ods', '.xlsx', ODS_TYPE, XLSX_TYPE].join(',') }" />
+		<input bind:files type="file" id="file-input" accept="{ ['.ods', ODS_TYPE].join(',') }" />
 	</label>
 </section>
 

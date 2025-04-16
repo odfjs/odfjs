@@ -1,9 +1,6 @@
 //@ts-check
 
-import {
-    _getODSTableRawContent, 
-    _getXLSXTableRawContent
-} from './shared.js'
+import { _getODSTableRawContent } from './shared.js'
 
 import {_createOdsFile} from './createOdsFile.js'
 
@@ -26,13 +23,6 @@ export function getODSTableRawContent(odsArrBuff){
     return _getODSTableRawContent(odsArrBuff, parseXML)
 }
 
-/**
- * @param {ArrayBuffer} xlsxArrBuff
- * @returns {ReturnType<_getXLSXTableRawContent>}
- */
-export function getXLSXTableRawContent(xlsxArrBuff){
-    return _getXLSXTableRawContent(xlsxArrBuff, parseXML)
-}
 
 
 /** @type { typeof DOMImplementation.prototype.createDocument } */
