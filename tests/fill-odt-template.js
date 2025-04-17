@@ -1,9 +1,9 @@
 import test from 'ava';
 import {join} from 'node:path';
 
-import {getOdtTemplate, getOdtTextContent} from '../scripts/odf/odtTemplate-forNode.js'
+import {getOdtTemplate} from '../scripts/odf/odtTemplate-forNode.js'
 
-import {fillOdtTemplate} from '../scripts/node.js'
+import {fillOdtTemplate, getOdtTextContent} from '../exports.js'
 import { listZipEntries } from './_helpers/zip-analysis.js';
 
 

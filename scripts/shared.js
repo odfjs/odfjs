@@ -1,6 +1,8 @@
 //@ts-check
 import { Uint8ArrayReader, ZipReader, TextWriter } from '@zip.js/zip.js';
 
+import {parseXML} from './DOMUtils.js'
+
 /** @import {Entry} from '@zip.js/zip.js'*/
 /** @import {SheetName, SheetRawContent, SheetRowRawContent, SheetCellRawContent} from './types.js' */
 
@@ -46,10 +48,9 @@ function extraxtODSCellText(cell) {
 /**
  * Extracts raw table content from an ODS file.
  * @param {ArrayBuffer} arrayBuffer - The ODS file.
- * @param {(str: string) => Document} parseXML - Function to parse XML content.
  * @returns {Promise<Map<SheetName, SheetRawContent>>}
  */
-export async function _getODSTableRawContent(arrayBuffer, parseXML) {
+export async function getODSTableRawContent(arrayBuffer) {
     const zipDataReader = new Uint8ArrayReader(new Uint8Array(arrayBuffer));
     const zipReader = new ZipReader(zipDataReader);
     const zipEntries = await zipReader.getEntries()

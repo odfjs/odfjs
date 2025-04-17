@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import {getODSTableRawContent, createOdsFile} from '../scripts/node.js'
+import {getODSTableRawContent, createOdsFile} from '../exports.js'
 
 /** @import {SheetName, SheetRawContent} from '../scripts/types.js' */
 

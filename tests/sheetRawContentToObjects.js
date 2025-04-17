@@ -1,5 +1,5 @@
 import test from 'ava';
-import { sheetRawContentToObjects } from "../scripts/shared.js"
+import { sheetRawContentToObjects } from "../exports.js"
 
 test("Empty header value should be kept", t => {
     const rawContent = [

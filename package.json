@@ -2,8 +2,13 @@
   "name": "@odfjs/odfjs",
   "version": "0.14.0",
   "type": "module",
-  "main": "./scripts/node.js",
-  "browser": "./scripts/browser.js",
+  "exports": "./scripts/exports.js",
+  "imports": {
+    "#DOM": {
+      "node": "./scripts/DOM/node.js",
+      "browser": "./scripts/DOM/browser.js"
+    }
+  },
   "scripts": {
     "build": "rollup -c",
     "dev": "npm-run-all --parallel dev:* start",
