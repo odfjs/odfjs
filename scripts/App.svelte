@@ -1,5 +1,5 @@
 <script>
-	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, createOdsFile} from './browser.js'
+	import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent, createOdsFile} from '../exports.js'
 
 	/** @import {SheetName, SheetRawContent} from './types.js' */
 
@@ -34,7 +34,7 @@
 
 </script>
 
-<h1>Import fichier .ods et .xslx</h1>
+<h1>Import fichier .ods</h1>
 
 <section>
 	<h2>Import</h2>
