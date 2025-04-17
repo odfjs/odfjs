@@ -1,6 +1,6 @@
 import { ZipReader, ZipWriter, BlobReader, BlobWriter, TextReader, Uint8ArrayReader, TextWriter, Uint8ArrayWriter } from '@zip.js/zip.js';
 
-import {traverse} from '../DOMUtils.js'
+import {traverse, parseXML, serializeToString, Node} from '../DOMUtils.js'
 import {makeManifestFile, getManifestFileData} from './manifest.js';
 
 /** @import {Reader, ZipWriterAddDataOptions} from '@zip.js/zip.js' */
@@ -344,12 +344,9 @@ function keepFile(filename){
 /**
  * @param {ODTFile} odtTemplate
  * @param {any} data 
- * @param {Function} parseXML 
- * @param {typeof XMLSerializer.prototype.serializeToString} serializeToString 
- * @param {typeof Node} Node
  * @returns {Promise<ODTFile>}
  */
-export default async function _fillOdtTemplate(odtTemplate, data, parseXML, serializeToString, Node) {
+export default async function fillOdtTemplate(odtTemplate, data) {
 
     const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(odtTemplate)));
 

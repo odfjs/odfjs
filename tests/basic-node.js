@@ -2,7 +2,7 @@ import {readFile} from 'node:fs/promises'
 
 import test from 'ava';
 
-import {getODSTableRawContent} from '../scripts/node.js'
+import {getODSTableRawContent} from '../exports.js'
 
 const nomAgeContent = (await readFile('./tests/data/nom-age.ods')).buffer
 

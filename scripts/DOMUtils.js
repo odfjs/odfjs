@@ -1,7 +1,27 @@
+import {DOMParser, XMLSerializer} from '#DOM'
+
 /*
     Since we're using xmldom in Node.js context, the entire DOM API is not implemented
     Functions here are helpers whild xmldom becomes more complete
 */
+
+
+/**
+ * 
+ * @param {string} str 
+ * @returns {Document}
+ */
+export function parseXML(str){
+    return (new DOMParser()).parseFromString(str, 'application/xml');
+}
+
+const serializer = new XMLSerializer()
+
+/** @type { typeof XMLSerializer.prototype.serializeToString } */
+export function serializeToString(node){
+    return serializer.serializeToString(node)
+}
+
 
 /**
  * Traverses a DOM tree starting from the given element and applies the visit function
@@ -21,3 +41,10 @@ export function traverse(node, visit) {
 
     visit(node);
 }
+
+export {
+    DOMParser, 
+    XMLSerializer,
+    createDocument,
+    Node
+} from '#DOM'

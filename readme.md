@@ -6,7 +6,7 @@ Small lib to parse/understand .odf files (.odt, .ods) in the browser and node.js
 ## Rough roadmap
 
 - [x] add odt templating
-- [ ] remove support for xlsx
+- [x] remove support for xlsx
 - [ ] add a .ods minifyer
 - [ ] add a generic .ods visualizer
 - [ ] move to a dedicated odf docs org
@@ -22,7 +22,7 @@ npm i https://github.com/odfjs/odfjs.git#v0.14.0
 ```
 
 
-### Basic - reading an ods/xlsx file
+### Basic - reading an ods file
 
 ```js
 import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent} from '@odfjs/odfjs'
@@ -40,14 +40,14 @@ async function getFileData(odsFile){
 
 The return value is an array of objects where 
 the **keys** are the column names in the first row and 
-the **values** are automatically converted from the .ods or .xlsx files (which type numbers, strings, booleans and dates) 
+the **values** are automatically converted from the .ods files (which type numbers, strings, booleans and dates) 
 to the appropriate JavaScript value
 
 
 ### Basic - creating an ods file
 
 ```js
-import {createOdsFile} from 'ods-xlsx'
+import {createOdsFile} from '@odfjs/odfjs'
 
 const content = new Map([
     [
@@ -128,7 +128,7 @@ They can be used to generate lists or tables in .odt files from data and a templ
 
 ### Demo
 
-https://davidbruant.github.io/ods-xlsx/
+https://odfjs.github.io/odfjs/
 
 
 ## Local dev

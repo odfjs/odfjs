@@ -1,5 +1,8 @@
 import { ZipWriter, BlobWriter, TextReader } from '@zip.js/zip.js';
 
+import {serializeToString, createDocument} from './DOMUtils.js'
+
+
 /** @import {SheetCellRawContent, SheetName, SheetRawContent} from './types.js' */
 
 const stylesXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -22,11 +25,9 @@ const manifestXml = `<?xml version="1.0" encoding="UTF-8"?>
 /**
  * Crée un fichier .ods à partir d'un Map de feuilles de calcul
  * @param {Map<SheetName, SheetRawContent>} sheetsData
- * @param {typeof DOMImplementation.prototype.createDocument} createDocument 
- * @param {typeof XMLSerializer.prototype.serializeToString} serializeToString 
  * @returns {Promise<ArrayBuffer>}
  */
-export async function _createOdsFile(sheetsData, createDocument, serializeToString) {
+export async function createOdsFile(sheetsData) {
     // Create a new zip writer
     const zipWriter = new ZipWriter(new BlobWriter('application/vnd.oasis.opendocument.spreadsheet'));
 
@@ -44,7 +45,7 @@ export async function _createOdsFile(sheetsData, createDocument, serializeToStri
         }
     );
 
-    const contentXml = generateContentFileXMLString(sheetsData, createDocument, serializeToString);
+    const contentXml = generateContentFileXMLString(sheetsData);
     zipWriter.add("content.xml", new TextReader(contentXml), {level: 9});
 
     zipWriter.add("styles.xml", new TextReader(stylesXml));
@@ -60,11 +61,9 @@ export async function _createOdsFile(sheetsData, createDocument, serializeToStri
 /**
  * Generate the content.xml file with spreadsheet data
  * @param {Map<SheetName, SheetRawContent>} sheetsData 
- * @param {typeof DOMImplementation.prototype.createDocument} createDocument 
- * @param {typeof XMLSerializer.prototype.serializeToString} serializeToString 
  * @returns {string}
  */
-function generateContentFileXMLString(sheetsData, createDocument, serializeToString) {
+function generateContentFileXMLString(sheetsData) {
     const doc = createDocument('urn:oasis:names:tc:opendocument:xmlns:office:1.0', 'office:document-content');
     const root = doc.documentElement;
 
