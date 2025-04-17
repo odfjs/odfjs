@@ -73,6 +73,35 @@ Pâtes à lasagne (fraîches !)
 
 });
 
+test('Filling with {#each} and non-iterable value results in no error and empty result', async t => {
+    const templatePath = join(import.meta.dirname, './data/enum-courses.odt')
+    const templateContent = `🧺 La liste de courses incroyable 🧺
+
+{#each listeCourses as élément}
+{élément}
+{/each}
+`
+
+	const data = {
+        listeCourses : undefined
+    }
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)
+
+    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
+
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent, `🧺 La liste de courses incroyable 🧺
+
+`)
+
+
+});
+
 
 
 test('template filling with {#each} generating a list', async t => {

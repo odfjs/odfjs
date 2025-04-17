@@ -30,7 +30,7 @@ const ODTMimetype = 'application/vnd.oasis.opendocument.text'
  * @param {any} context - data / global object
  * @return {any}
  */
-function evaludateTemplateExpression(expression, context){
+function evaluateTemplateExpression(expression, context){
     const parts = expression.trim().split('.')
 
     let value = context;
@@ -76,7 +76,7 @@ function findPlacesToFillInString(str) {
             parts.push(fixedPart)
 
         
-        parts.push(data => evaludateTemplateExpression(expression, data))
+        parts.push(data => evaluateTemplateExpression(expression, data))
 
         remaining = newRemaining
     }
@@ -189,12 +189,10 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
 
     // Find the iterable in the data
     // PPP eventually, evaluate the expression as a JS expression
-    const iterable = evaludateTemplateExpression(iterableExpression, data)
-    if(!iterable){
-        throw new TypeError(`Missing iterable (${iterableExpression})`)
-    }
-    if(typeof iterable[Symbol.iterator] !== 'function'){
-        throw new TypeError(`'${iterableExpression}' is not iterable`)
+    let iterable = evaluateTemplateExpression(iterableExpression, data)
+    if(!iterable || typeof iterable[Symbol.iterator] !== 'function'){
+        // when there is no iterable, silently replace with empty array
+        iterable = []
     }
 
     // create each loop result
