@@ -1,5 +1,5 @@
 
-console.info('DOM implementation in browser')
+//console.info('DOM implementation in browser')
 
 /** @type { typeof DOMImplementation.prototype.createDocument } */
 export function createDocument(...args){

@@ -1,6 +1,6 @@
 import { DOMImplementation } from "@xmldom/xmldom"
 
-console.info('DOM implementation in Node.js based on xmldom')
+//console.info('DOM implementation in Node.js based on xmldom')
 
 const implementation = new DOMImplementation()
 
