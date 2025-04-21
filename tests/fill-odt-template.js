@@ -279,6 +279,33 @@ Hiver
 });
 
 
+test('template filling {#each ...}{/each} within a single text node', async t => {
+    const templatePath = join(import.meta.dirname, './fixtures/liste-nombres.odt')
+    const templateContent = `Liste de nombres
+
+{#each nombres as n}{n} {/each}
+`
+
+	const data = {
+        nombres : [1,1,2,3,5,8,13,21]
+    }
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)    
+    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
+
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent, `Liste de nombres
+
+1 1 2 3 5 8 13 21
+`)
+
+});
+
+
 
 test('template filling of a table', async t => {
     const templatePath = join(import.meta.dirname, './fixtures/tableau-simple.odt')
