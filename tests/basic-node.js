@@ -4,7 +4,7 @@ import test from 'ava';
 
 import {getODSTableRawContent} from '../exports.js'
 
-const nomAgeContent = (await readFile('./tests/data/nom-age.ods')).buffer
+const nomAgeContent = (await readFile('./tests/fixtures/nom-age.ods')).buffer
 
 test('basic', async t => {
 	const table = await getODSTableRawContent(nomAgeContent);
