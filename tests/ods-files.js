@@ -5,7 +5,7 @@ import test from 'ava';
 import {getODSTableRawContent} from '../exports.js'
 
 test('.ods file with table:number-columns-repeated attribute in cell', async t => {
-    const repeatedCellFileContent = (await readFile('./tests/data/cellules-répétées.ods')).buffer
+    const repeatedCellFileContent = (await readFile('./tests/fixtures/cellules-répétées.ods')).buffer
 
 	const table = await getODSTableRawContent(repeatedCellFileContent);
 
@@ -17,7 +17,7 @@ test('.ods file with table:number-columns-repeated attribute in cell', async t =
 
 
 test('.ods cells with dates should be recognized', async t => {
-    const odsFileWithDates = (await readFile('./tests/data/cellules avec dates.ods')).buffer
+    const odsFileWithDates = (await readFile('./tests/fixtures/cellules avec dates.ods')).buffer
 	const table = await getODSTableRawContent(odsFileWithDates);
 
     const feuille1 = table.get('Feuille1')
@@ -39,7 +39,7 @@ test('.ods cells with dates should be recognized', async t => {
 
 
 test('.ods file with new lines in content is ', async t => {
-    const repeatedCellFileContent = (await readFile('./tests/data/cellule avec sauts.ods')).buffer
+    const repeatedCellFileContent = (await readFile('./tests/fixtures/cellule avec sauts.ods')).buffer
 
 	const table = await getODSTableRawContent(repeatedCellFileContent);
 
