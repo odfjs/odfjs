@@ -217,13 +217,6 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
 }
 
 
-function findEachBlockStartsInString(str){
-    
-
-
-
-}
-
 
 /**
  * 
@@ -269,7 +262,7 @@ function fillTemplatedOdtElement(rootElement, data, Node){
                         else{
                             remainingText = ''
                         }
-                        
+
                         // per spec, currentNode now contains before-match and match text
                     
                         if(match.index > 0){
