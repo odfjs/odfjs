@@ -261,25 +261,27 @@ function fillTemplatedOdtElement(rootElement, data, Node){
                 if(match){
                     // split 3-way : before-match, match and after-match
 
-                    let afterMatchTextNode
-
                     if(match[0].length < remainingText.length){
-                        afterMatchTextNode = currentNode.splitText(match.index + match[0].length)
+                        let afterMatchTextNode = currentNode.splitText(match.index + match[0].length)
                         if(afterMatchTextNode.textContent && afterMatchTextNode.textContent.length >= 1){
                             remainingText = afterMatchTextNode.textContent
                         }
                         else{
                             remainingText = ''
                         }
-                    }
+                        
+                        // per spec, currentNode now contains before-match and match text
+                    
+                        if(match.index > 0){
+                            currentNode.splitText(match.index)
+                        }
 
-                    // per spec, currentNode now contains before-match and match text
-                    if(match.index > 0){
-                        currentNode.splitText(match.index)
+                        if(afterMatchTextNode){
+                            currentNode = afterMatchTextNode
+                        }
                     }
-
-                    if(afterMatchTextNode){
-                        currentNode = afterMatchTextNode
+                    else{
+                        remainingText = ''
                     }
                 }
                 else{
