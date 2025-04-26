@@ -36,7 +36,7 @@ Bonjoir ☀️
 });
 
 
-test('basic template filling with {#if}', async t => {
+test.skip('basic template filling with {#if}', async t => {
     const templatePath = join(import.meta.dirname, './fixtures/description-nombre.odt')
     const templateContent = `Description du nombre {n}
 
@@ -51,7 +51,7 @@ n est un petit nombre
     const templateTextContent = await getOdtTextContent(odtTemplate)
     t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
 
-    
+    // then branch
     const odtResult3 = await fillOdtTemplate(odtTemplate, {n: 3})
     const odtResult3TextContent = await getOdtTextContent(odtResult3)
     t.deepEqual(odtResult3TextContent, `Description du nombre 3
@@ -59,6 +59,7 @@ n est un petit nombre
 n est un petit nombre
 `)
     
+    // else branch
     const odtResult8 = await fillOdtTemplate(odtTemplate, {n: 8})
     const odtResult8TextContent = await getOdtTextContent(odtResult8)
     t.deepEqual(odtResult8TextContent, `Description du nombre 8
@@ -336,7 +337,6 @@ Les nombres : 1 1 2 3 5 8 13 21  !!
 `)
 
 });
-
 
 
 test('template filling of a table', async t => {

@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "@xmldom/xmldom": "^0.9.8",
-    "@zip.js/zip.js": "^2.7.57"
+    "@zip.js/zip.js": "^2.7.57",
+    "ses": "^1.12.0"
   }
 }

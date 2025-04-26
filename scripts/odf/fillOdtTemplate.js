@@ -3,6 +3,10 @@ import { ZipReader, ZipWriter, BlobReader, BlobWriter, TextReader, Uint8ArrayRea
 import {traverse, parseXML, serializeToString, Node} from '../DOMUtils.js'
 import {makeManifestFile, getManifestFileData} from './manifest.js';
 
+import 'ses'
+
+lockdown();
+
 /** @import {Reader, ZipWriterAddDataOptions} from '@zip.js/zip.js' */
 /** @import {ODFManifest} from './manifest.js' */
 
@@ -18,41 +22,17 @@ const ODTMimetype = 'application/vnd.oasis.opendocument.text'
 /**
  * @typedef TextPlaceToFill
  * @property { {expression: string, replacedString:string}[] } expressions
- * @property {(values: any) => void} fill
+ * @property {() => void} fill
  */
 
-
-/**
- * PPP : for now, expression is expected to be only an object property name or a dot-path
- * in the future, it will certainly be a JavaScript expression
- * securely evaluated within an hardernedJS Compartment https://hardenedjs.org/#compartment
- * @param {string} expression 
- * @param {any} context - data / global object
- * @return {any}
- */
-function evaluateTemplateExpression(expression, context){
-    const parts = expression.trim().split('.')
-
-    let value = context;
-
-    for(const part of parts){
-        if(!value){
-            return undefined
-        }
-        else{
-            value = value[part]
-        }
-    }
-
-    return value
-}
 
 
 /**
  * @param {string} str
+ * @param {Compartment} compartment 
  * @returns {TextPlaceToFill | undefined}
  */
-function findPlacesToFillInString(str) {
+function findPlacesToFillInString(str, compartment) {
     const matches = str.matchAll(/\{([^{#\/]+?)\}/g)
 
     /** @type {TextPlaceToFill['expressions']} */
@@ -75,8 +55,7 @@ function findPlacesToFillInString(str) {
         if (fixedPart.length >= 1)
             parts.push(fixedPart)
 
-        
-        parts.push(data => evaluateTemplateExpression(expression, data))
+        parts.push(() => compartment.evaluate(expression))
 
         remaining = newRemaining
     }
@@ -117,10 +96,9 @@ function findPlacesToFillInString(str) {
  * @param {string} iterableExpression 
  * @param {string} itemExpression 
  * @param {Node} endNode 
- * @param {any} data 
- * @param {typeof Node} Node
+ * @param {Compartment} compartment 
  */
-function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, data, Node){
+function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment){
     //console.log('fillEachBlock', iterableExpression, itemExpression)
     //console.log('startNode', startNode.nodeType, startNode.nodeName)
     //console.log('endNode', endNode.nodeType, endNode.nodeName)
@@ -189,7 +167,7 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
 
     // Find the iterable in the data
     // PPP eventually, evaluate the expression as a JS expression
-    let iterable = evaluateTemplateExpression(iterableExpression, data)
+    let iterable = compartment.evaluate(iterableExpression)
     if(!iterable || typeof iterable[Symbol.iterator] !== 'function'){
         // when there is no iterable, silently replace with empty array
         iterable = []
@@ -202,11 +180,14 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
         // @ts-ignore
         const itemFragment = repeatedFragment.cloneNode(true)
 
+        let insideCompartment = new Compartment(
+            Object.assign({}, compartment.globalThis, {[itemExpression]: item})
+        )
+
         // recursive call to fillTemplatedOdtElement on itemFragment
         fillTemplatedOdtElement(
             itemFragment, 
-            Object.assign({}, data, {[itemExpression]: item}),
-            Node
+            insideCompartment
         )
         // @ts-ignore
         commonAncestor.insertBefore(itemFragment, endChild)
@@ -220,12 +201,11 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
 
 /**
  * 
- * @param {Element | DocumentFragment} rootElement 
- * @param {any} data 
- * @param {typeof Node} Node 
+ * @param {Element | DocumentFragment | Document} rootElement 
+ * @param {Compartment} compartment 
  * @returns {void}
  */
-function fillTemplatedOdtElement(rootElement, data, Node){
+function fillTemplatedOdtElement(rootElement, compartment){
     //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName)
 
     // Perform a first traverse to split textnodes when they contain several block markers
@@ -246,6 +226,7 @@ function fillTemplatedOdtElement(rootElement, data, Node){
                     let thisMatch = remainingText.match(regexp)
 
                     // trying to find only the first match in remainingText string
+                    // @ts-ignore
                     if(thisMatch && (!match || match.index > thisMatch.index)){
                         match = thisMatch
                     }
@@ -255,6 +236,7 @@ function fillTemplatedOdtElement(rootElement, data, Node){
                     // split 3-way : before-match, match and after-match
 
                     if(match[0].length < remainingText.length){
+                        // @ts-ignore
                         let afterMatchTextNode = currentNode.splitText(match.index + match[0].length)
                         if(afterMatchTextNode.textContent && afterMatchTextNode.textContent.length >= 1){
                             remainingText = afterMatchTextNode.textContent
@@ -265,7 +247,9 @@ function fillTemplatedOdtElement(rootElement, data, Node){
 
                         // per spec, currentNode now contains before-match and match text
                     
+                        // @ts-ignore
                         if(match.index > 0){
+                            // @ts-ignore
                             currentNode.splitText(match.index)
                         }
 
@@ -344,7 +328,7 @@ function fillTemplatedOdtElement(rootElement, data, Node){
                     
                     // found an #each and its corresponding /each
                     // execute replacement loop
-                    fillEachBlock(eachBlockStartNode, iterableExpression, itemExpression, eachBlockEndNode, data, Node)
+                    fillEachBlock(eachBlockStartNode, iterableExpression, itemExpression, eachBlockEndNode, compartment)
 
                     eachBlockStartNode = undefined
                     iterableExpression = undefined
@@ -356,12 +340,16 @@ function fillTemplatedOdtElement(rootElement, data, Node){
 
             // Looking for variables for substitutions
             if(!insideAnEachBlock){
+                // @ts-ignore
                 if (currentNode.data) {
-                    const placesToFill = findPlacesToFillInString(currentNode.data)
+                    // @ts-ignore
+                    const placesToFill = findPlacesToFillInString(currentNode.data, compartment)
 
                     if(placesToFill){
-                        const newText = placesToFill.fill(data)
+                        const newText = placesToFill.fill()
+                        // @ts-ignore
                         const newTextNode = currentNode.ownerDocument?.createTextNode(newText)
+                        // @ts-ignore
                         currentNode.parentNode?.replaceChild(newTextNode, currentNode)
                     }
                 }
@@ -374,10 +362,13 @@ function fillTemplatedOdtElement(rootElement, data, Node){
         if(currentNode.nodeType === Node.ATTRIBUTE_NODE){
             // Looking for variables for substitutions
             if(!insideAnEachBlock){
+                // @ts-ignore
                 if (currentNode.value) {
-                    const placesToFill = findPlacesToFillInString(currentNode.value)
+                    // @ts-ignore
+                    const placesToFill = findPlacesToFillInString(currentNode.value, compartment)
                     if(placesToFill){
-                        currentNode.value = placesToFill.fill(data)
+                        // @ts-ignore
+                        currentNode.value = placesToFill.fill()
                     }
                 }
             }
@@ -454,7 +445,11 @@ export default async function fillOdtTemplate(odtTemplate, data) {
                     // @ts-ignore
                     const contentXml = await entry.getData(new TextWriter());
                     const contentDocument = parseXML(contentXml);
-                    fillTemplatedOdtElement(contentDocument, data, Node) 
+
+                    const compartment = new Compartment(data)
+
+                    fillTemplatedOdtElement(contentDocument, compartment) 
+                    
                     const updatedContentXml = serializeToString(contentDocument)
 
                     content = new TextReader(updatedContentXml)
