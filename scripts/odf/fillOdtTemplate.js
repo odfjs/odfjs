@@ -217,6 +217,14 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
 }
 
 
+function findEachBlockStartsInString(str){
+    
+
+
+
+}
+
+
 /**
  * 
  * @param {Element | DocumentFragment} rootElement 
@@ -226,6 +234,68 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
  */
 function fillTemplatedOdtElement(rootElement, data, Node){
     //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName)
+
+    // Perform a first traverse to split textnodes when they contain several block markers
+    traverse(rootElement, currentNode => {
+        if(currentNode.nodeType === Node.TEXT_NODE){
+            // trouver tous les débuts et fin de each et découper le textNode
+
+            let remainingText = currentNode.textContent || ''
+
+            while(remainingText.length >= 1){
+                let match;
+
+                // looking for opening {#each ...} block
+                const eachBlockOpeningRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
+                const eachBlockClosingRegex = /{\/each}/;
+
+                for(const regexp of [eachBlockOpeningRegex, eachBlockClosingRegex]){
+                    let thisMatch = remainingText.match(regexp)
+
+                    // trying to find only the first match in remainingText string
+                    if(thisMatch && (!match || match.index > thisMatch.index)){
+                        match = thisMatch
+                    }
+                }
+
+                if(match){
+                    // split 3-way : before-match, match and after-match
+
+                    let afterMatchTextNode
+
+                    if(match[0].length < remainingText.length){
+                        afterMatchTextNode = currentNode.splitText(match.index + match[0].length)
+                        if(afterMatchTextNode.textContent && afterMatchTextNode.textContent.length >= 1){
+                            remainingText = afterMatchTextNode.textContent
+                        }
+                        else{
+                            remainingText = ''
+                        }
+                    }
+
+                    // per spec, currentNode now contains before-match and match text
+                    if(match.index > 0){
+                        currentNode.splitText(match.index)
+                    }
+
+                    if(afterMatchTextNode){
+                        currentNode = afterMatchTextNode
+                    }
+                }
+                else{
+                    remainingText = ''
+                }
+            }
+
+        }
+        else{
+            // skip
+        }
+    })
+
+    // now, each Node contains at most one block marker
+
+
 
     /** @type {Node | undefined} */
     let eachBlockStartNode
@@ -246,17 +316,15 @@ function fillTemplatedOdtElement(rootElement, data, Node){
             const text = currentNode.textContent || ''
 
             // looking for {#each x as y}
-            const eachStartRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/g;
-            const startMatches = [...text.matchAll(eachStartRegex)];
+            const eachStartRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
+            const startMatch = text.match(eachStartRegex);
 
-            if(startMatches && startMatches.length >= 1){
+            if(startMatch){
                 if(insideAnEachBlock){
                     nestedEach = nestedEach + 1
                 }
                 else{
-                    // PPP for now, consider only the first set of matches
-                    // eventually, consider all of them for in-text-node {#each}...{/each}
-                    let [_, _iterableExpression, _itemExpression] = startMatches[0]
+                    let [_, _iterableExpression, _itemExpression] = startMatch
                     
                     iterableExpression = _iterableExpression
                     itemExpression = _itemExpression
@@ -265,10 +333,10 @@ function fillTemplatedOdtElement(rootElement, data, Node){
             }
 
             // trying to find an {/each}
-            const eachEndRegex = /{\/each}/g
-            const endMatches = [...text.matchAll(eachEndRegex)];
+            const eachEndRegex = /{\/each}/
+            const endMatch = text.match(eachEndRegex)
 
-            if(endMatches && endMatches.length >= 1){                    
+            if(endMatch){                    
                 if(!eachBlockStartNode)
                     throw new TypeError(`{/each} found without corresponding opening {#each x as y}`)
                 
