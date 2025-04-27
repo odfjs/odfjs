@@ -3,7 +3,7 @@ import {join} from 'node:path';
 
 import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 
-import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
+import {fillOdtTemplate} from '../../exports.js'
 import { listZipEntries } from '../helpers/zip-analysis.js';
 
 

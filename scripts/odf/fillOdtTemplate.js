@@ -294,7 +294,8 @@ function fillTemplatedOdtElement(rootElement, compartment){
 
     // @ts-ignore
     traverse(rootElement, currentNode => {
-        const insideAnEachBlock = !!eachBlockOpeningNode
+        //console.log('currentlyUnclosedBlocks', currentlyUnclosedBlocks)
+        const insideAnOpenBlock = currentlyUnclosedBlocks.length >= 1
 
         if(currentNode.nodeType === Node.TEXT_NODE){
             const text = currentNode.textContent || ''
@@ -303,9 +304,15 @@ function fillTemplatedOdtElement(rootElement, compartment){
             const eachStartRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
             const startMatch = text.match(eachStartRegex);
 
+            //console.log('text, match', )
+
             if(startMatch){
-                if(insideAnEachBlock){
-                    currentlyUnclosedBlocks.push(EACH)
+                //console.log('startMatch', startMatch)
+
+                currentlyUnclosedBlocks.push(EACH)
+                
+                if(insideAnOpenBlock){
+                    // do nothing 
                 }
                 else{
                     let [_, _iterableExpression, _itemExpression] = startMatch
@@ -320,16 +327,18 @@ function fillTemplatedOdtElement(rootElement, compartment){
             const eachClosingBlockString = '{/each}'
             const isEachClosingBlock = text.includes(eachClosingBlockString)
 
-            if(isEachClosingBlock){                    
+            if(isEachClosingBlock){
+
+                //console.log('isEachClosingBlock', isEachClosingBlock)
+
                 if(!eachBlockOpeningNode)
                     throw new Error(`{/each} found without corresponding opening {#each x as y}`)
                 
                 if(currentlyUnclosedBlocks.at(-1) !== EACH)
                     throw new Error(`{/each} found while the last opened block was not an opening {#each x as y}`)
 
-                if(currentlyUnclosedBlocks.length >= 1){
+                if(currentlyUnclosedBlocks.filter(x => x === EACH).length > 1){
                     // ignore because it will be treated as part of the outer {#each}
-                    currentlyUnclosedBlocks.pop()
                 }
                 else{
                     eachBlockClosingNode = currentNode
@@ -343,11 +352,13 @@ function fillTemplatedOdtElement(rootElement, compartment){
                     eachBlockItemExpression = undefined 
                     eachBlockClosingNode = undefined
                 }
+
+                currentlyUnclosedBlocks.pop()
             }
 
 
             // Looking for variables for substitutions
-            if(!insideAnEachBlock){
+            if(!insideAnOpenBlock){
                 // @ts-ignore
                 if (currentNode.data) {
                     // @ts-ignore
@@ -369,7 +380,7 @@ function fillTemplatedOdtElement(rootElement, compartment){
 
         if(currentNode.nodeType === Node.ATTRIBUTE_NODE){
             // Looking for variables for substitutions
-            if(!insideAnEachBlock){
+            if(!insideAnOpenBlock){
                 // @ts-ignore
                 if (currentNode.value) {
                     // @ts-ignore

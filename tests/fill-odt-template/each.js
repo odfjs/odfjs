@@ -4,11 +4,9 @@ import {join} from 'node:path';
 import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 
 import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
-import { listZipEntries } from '../helpers/zip-analysis.js';
 
 
-
-test.skip('basic template filling with {#each}', async t => {
+test('basic template filling with {#each}', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/enum-courses.odt')
     const templateContent = `🧺 La liste de courses incroyable 🧺
 
@@ -45,7 +43,7 @@ Pâtes à lasagne (fraîches !)
 });
 
 
-test.skip('Filling with {#each} and non-iterable value results in no error and empty result', async t => {
+test('Filling with {#each} and non-iterable value results in no error and empty result', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/enum-courses.odt')
     const templateContent = `🧺 La liste de courses incroyable 🧺
 
@@ -75,7 +73,7 @@ test.skip('Filling with {#each} and non-iterable value results in no error and e
 });
 
 
-test.skip('template filling with {#each} generating a list', async t => {
+test('template filling with {#each} generating a list', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/liste-courses.odt')
     const templateContent = `🧺 La liste de courses incroyable 🧺
 
@@ -112,7 +110,7 @@ test.skip('template filling with {#each} generating a list', async t => {
 });
 
 
-test.skip('template filling with 2 sequential {#each}', async t => {
+test('template filling with 2 sequential {#each}', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/liste-fruits-et-légumes.odt')
     const templateContent = `Liste de fruits et légumes
 
@@ -164,7 +162,7 @@ Poivron 🫑
 });
 
 
-test.skip('template filling with nested {#each}s', async t => {
+test('template filling with nested {#each}s', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/légumes-de-saison.odt')
     const templateContent = `Légumes de saison
 
@@ -249,7 +247,7 @@ Hiver
 });
 
 
-test.skip('template filling {#each ...}{/each} within a single text node', async t => {
+test('template filling {#each ...}{/each} within a single text node', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/liste-nombres.odt')
     const templateContent = `Liste de nombres
 
@@ -276,7 +274,7 @@ Les nombres : 1 1 2 3 5 8 13 21  !!
 });
 
 
-test.skip('template filling of a table', async t => {
+test('template filling of a table', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/tableau-simple.odt')
     const templateContent = `Évolution énergie en kWh par personne en France
 

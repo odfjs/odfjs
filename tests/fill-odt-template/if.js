@@ -4,10 +4,9 @@ import {join} from 'node:path';
 import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 
 import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
-import { listZipEntries } from '../helpers/zip-analysis.js';
 
 
-test.skip('basic template filling with {#if}', async t => {
+test('basic template filling with {#if}', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/description-nombre.odt')
     const templateContent = `Description du nombre {n}
 
