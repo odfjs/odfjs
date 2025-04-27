@@ -180,9 +180,10 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         // @ts-ignore
         const itemFragment = repeatedFragment.cloneNode(true)
 
-        let insideCompartment = new Compartment(
-            Object.assign({}, compartment.globalThis, {[itemExpression]: item})
-        )
+        let insideCompartment = new Compartment({
+            globals: Object.assign({}, compartment.globalThis, {[itemExpression]: item}),
+            __options__: true
+        })
 
         // recursive call to fillTemplatedOdtElement on itemFragment
         fillTemplatedOdtElement(
@@ -446,7 +447,10 @@ export default async function fillOdtTemplate(odtTemplate, data) {
                     const contentXml = await entry.getData(new TextWriter());
                     const contentDocument = parseXML(contentXml);
 
-                    const compartment = new Compartment(data)
+                    const compartment = new Compartment({
+                        globals: data,
+                        __options__: true
+                    })
 
                     fillTemplatedOdtElement(contentDocument, compartment) 
                     
