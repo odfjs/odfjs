@@ -7,6 +7,7 @@ import 'ses'
 
 lockdown();
 
+
 /** @import {Reader, ZipWriterAddDataOptions} from '@zip.js/zip.js' */
 /** @import {ODFManifest} from './manifest.js' */
 
@@ -199,6 +200,9 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 }
 
 
+const IF = 'IF'
+const EACH = 'EACH'
+
 
 /**
  * 
@@ -278,19 +282,19 @@ function fillTemplatedOdtElement(rootElement, compartment){
 
 
     /** @type {Node | undefined} */
-    let eachBlockStartNode
+    let eachBlockOpeningNode
     /** @type {Node | undefined} */
-    let eachBlockEndNode
+    let eachBlockClosingNode
 
-    let nestedEach = 0
+    let currentlyUnclosedBlocks = []
 
-    let iterableExpression, itemExpression;
+    let eachBlockIterableExpression, eachBlockItemExpression;
 
     // Traverse "in document order"
 
     // @ts-ignore
     traverse(rootElement, currentNode => {
-        const insideAnEachBlock = !!eachBlockStartNode
+        const insideAnEachBlock = !!eachBlockOpeningNode
 
         if(currentNode.nodeType === Node.TEXT_NODE){
             const text = currentNode.textContent || ''
@@ -301,40 +305,43 @@ function fillTemplatedOdtElement(rootElement, compartment){
 
             if(startMatch){
                 if(insideAnEachBlock){
-                    nestedEach = nestedEach + 1
+                    currentlyUnclosedBlocks.push(EACH)
                 }
                 else{
                     let [_, _iterableExpression, _itemExpression] = startMatch
                     
-                    iterableExpression = _iterableExpression
-                    itemExpression = _itemExpression
-                    eachBlockStartNode = currentNode
+                    eachBlockIterableExpression = _iterableExpression
+                    eachBlockItemExpression = _itemExpression
+                    eachBlockOpeningNode = currentNode
                 }
             }
 
             // trying to find an {/each}
-            const eachEndRegex = /{\/each}/
-            const endMatch = text.match(eachEndRegex)
+            const eachClosingBlockString = '{/each}'
+            const isEachClosingBlock = text.includes(eachClosingBlockString)
 
-            if(endMatch){                    
-                if(!eachBlockStartNode)
-                    throw new TypeError(`{/each} found without corresponding opening {#each x as y}`)
+            if(isEachClosingBlock){                    
+                if(!eachBlockOpeningNode)
+                    throw new Error(`{/each} found without corresponding opening {#each x as y}`)
                 
-                if(nestedEach >= 1){
+                if(currentlyUnclosedBlocks.at(-1) !== EACH)
+                    throw new Error(`{/each} found while the last opened block was not an opening {#each x as y}`)
+
+                if(currentlyUnclosedBlocks.length >= 1){
                     // ignore because it will be treated as part of the outer {#each}
-                    nestedEach = nestedEach - 1
+                    currentlyUnclosedBlocks.pop()
                 }
                 else{
-                    eachBlockEndNode = currentNode
+                    eachBlockClosingNode = currentNode
                     
                     // found an #each and its corresponding /each
                     // execute replacement loop
-                    fillEachBlock(eachBlockStartNode, iterableExpression, itemExpression, eachBlockEndNode, compartment)
+                    fillEachBlock(eachBlockOpeningNode, eachBlockIterableExpression, eachBlockItemExpression, eachBlockClosingNode, compartment)
 
-                    eachBlockStartNode = undefined
-                    iterableExpression = undefined
-                    itemExpression = undefined 
-                    eachBlockEndNode = undefined
+                    eachBlockOpeningNode = undefined
+                    eachBlockIterableExpression = undefined
+                    eachBlockItemExpression = undefined 
+                    eachBlockClosingNode = undefined
                 }
             }
 

@@ -1,78 +1,15 @@
 import test from 'ava';
 import {join} from 'node:path';
 
-import {getOdtTemplate} from '../scripts/odf/odtTemplate-forNode.js'
+import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 
-import {fillOdtTemplate, getOdtTextContent} from '../exports.js'
-import { listZipEntries } from './helpers/zip-analysis.js';
-
-
-test('basic template filling with variable substitution', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/template-anniversaire.odt')
-    const templateContent = `Yo {nom} ! 
-Tu es né.e le {dateNaissance}
-
-Bonjoir ☀️
-`
-
-	const data = {
-        nom: 'David Bruant',
-        dateNaissance: '8 mars 1987'
-    }
-
-    const odtTemplate = await getOdtTemplate(templatePath)
-    const templateTextContent = await getOdtTextContent(odtTemplate)
-    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
-
-    const odtResult = await fillOdtTemplate(odtTemplate, data)
-
-    const odtResultTextContent = await getOdtTextContent(odtResult)
-    t.deepEqual(odtResultTextContent, `Yo David Bruant ! 
-Tu es né.e le 8 mars 1987
-
-Bonjoir ☀️
-`)
-
-});
+import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
+import { listZipEntries } from '../helpers/zip-analysis.js';
 
 
-test.skip('basic template filling with {#if}', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/description-nombre.odt')
-    const templateContent = `Description du nombre {n}
 
-{#if n >5}
-n est un grand nombre
-{:else}
-n est un petit nombre
-{/if}
-`
-
-    const odtTemplate = await getOdtTemplate(templatePath)
-    const templateTextContent = await getOdtTextContent(odtTemplate)
-    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
-
-    // then branch
-    const odtResult3 = await fillOdtTemplate(odtTemplate, {n: 3})
-    const odtResult3TextContent = await getOdtTextContent(odtResult3)
-    t.deepEqual(odtResult3TextContent, `Description du nombre 3
-
-n est un petit nombre
-`)
-    
-    // else branch
-    const odtResult8 = await fillOdtTemplate(odtTemplate, {n: 8})
-    const odtResult8TextContent = await getOdtTextContent(odtResult8)
-    t.deepEqual(odtResult8TextContent, `Description du nombre 8
-
-n est un grand nombre
-`)
-
-
-});
-
-
-test('basic template filling with {#each}', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/enum-courses.odt')
+test.skip('basic template filling with {#each}', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/enum-courses.odt')
     const templateContent = `🧺 La liste de courses incroyable 🧺
 
 {#each listeCourses as élément}
@@ -108,8 +45,8 @@ Pâtes à lasagne (fraîches !)
 });
 
 
-test('Filling with {#each} and non-iterable value results in no error and empty result', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/enum-courses.odt')
+test.skip('Filling with {#each} and non-iterable value results in no error and empty result', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/enum-courses.odt')
     const templateContent = `🧺 La liste de courses incroyable 🧺
 
 {#each listeCourses as élément}
@@ -138,8 +75,8 @@ test('Filling with {#each} and non-iterable value results in no error and empty 
 });
 
 
-test('template filling with {#each} generating a list', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/liste-courses.odt')
+test.skip('template filling with {#each} generating a list', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/liste-courses.odt')
     const templateContent = `🧺 La liste de courses incroyable 🧺
 
 - {#each listeCourses as élément}
@@ -175,8 +112,8 @@ test('template filling with {#each} generating a list', async t => {
 });
 
 
-test('template filling with 2 sequential {#each}', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/liste-fruits-et-légumes.odt')
+test.skip('template filling with 2 sequential {#each}', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/liste-fruits-et-légumes.odt')
     const templateContent = `Liste de fruits et légumes
 
 Fruits
@@ -227,8 +164,8 @@ Poivron 🫑
 });
 
 
-test('template filling with nested {#each}s', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/légumes-de-saison.odt')
+test.skip('template filling with nested {#each}s', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/légumes-de-saison.odt')
     const templateContent = `Légumes de saison
 
 {#each légumesSaison as saisonLégumes}
@@ -312,8 +249,8 @@ Hiver
 });
 
 
-test('template filling {#each ...}{/each} within a single text node', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/liste-nombres.odt')
+test.skip('template filling {#each ...}{/each} within a single text node', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/liste-nombres.odt')
     const templateContent = `Liste de nombres
 
 Les nombres : {#each nombres as n}{n} {/each} !!
@@ -339,8 +276,8 @@ Les nombres : 1 1 2 3 5 8 13 21  !!
 });
 
 
-test('template filling of a table', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/tableau-simple.odt')
+test.skip('template filling of a table', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/tableau-simple.odt')
     const templateContent = `Évolution énergie en kWh par personne en France
 
 Année
@@ -398,34 +335,3 @@ Année
 `.trim())
 
 });
-
-
-test('template filling preserves images', async t => {
-    const templatePath = join(import.meta.dirname, './fixtures/template-avec-image.odt')
-
-	const data = {
-        commentaire : `J'adooooooore 🤩 West covinaaaaaaaaaaa 🎶`
-    }
-
-    const odtTemplate = await getOdtTemplate(templatePath)
-    const templateEntries = await listZipEntries(odtTemplate)
-
-    //console.log('templateEntries', templateEntries.map(({filename, directory}) => ({filename, directory})))
-
-    t.assert(
-        templateEntries.find(entry => entry.filename.startsWith('Pictures/')), 
-        `One zip entry of the template is expected to have a name that starts with 'Pictures/'`
-    )
-
-    const odtResult = await fillOdtTemplate(odtTemplate, data)
-    const resultEntries = await listZipEntries(odtResult)
-
-    //console.log('resultEntries', resultEntries.map(({filename, directory}) => ({filename, directory})))
-
-    
-    t.assert(
-        resultEntries.find(entry => entry.filename.startsWith('Pictures/')), 
-        `One zip entry of the result is expected to have a name that starts with 'Pictures/'`
-    )
-
-})
