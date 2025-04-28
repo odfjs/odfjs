@@ -90,6 +90,22 @@ function findPlacesToFillInString(str, compartment) {
 }
 
 
+/**
+ * 
+ * @param {Node} ifOpeningMarkerNode 
+ * @param {Node | undefined} ifElseMarkerNode 
+ * @param {Node} ifClosingMarkerNode 
+ * @param {string} ifBlockConditionExpression 
+ * @param {Compartment} compartment 
+ */
+function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment){
+    throw `PPP
+        - executer l'expression
+        - selon la valeur, choisir le bon block à extraire/remplir
+        - 
+    `
+}
+
 
 /**
  * 
@@ -280,50 +296,62 @@ function fillTemplatedOdtElement(rootElement, compartment){
     // now, each Node contains at most one block marker
 
 
+    let currentlyOpenBlocks = []
+
 
     /** @type {Node | undefined} */
-    let eachBlockOpeningNode
+    let eachOpeningMarkerNode
     /** @type {Node | undefined} */
-    let eachBlockClosingNode
-
-    let currentlyUnclosedBlocks = []
+    let eachClosingMarkerNode
 
     let eachBlockIterableExpression, eachBlockItemExpression;
 
+
+    /** @type {Node | undefined} */
+    let ifOpeningMarkerNode
+    /** @type {Node | undefined} */
+    let ifElseMarkerNode
+    /** @type {Node | undefined} */
+    let ifClosingMarkerNode
+
+    let ifBlockConditionExpression
     // Traverse "in document order"
 
     // @ts-ignore
     traverse(rootElement, currentNode => {
         //console.log('currentlyUnclosedBlocks', currentlyUnclosedBlocks)
-        const insideAnOpenBlock = currentlyUnclosedBlocks.length >= 1
+        const insideAnOpenBlock = currentlyOpenBlocks.length >= 1
 
         if(currentNode.nodeType === Node.TEXT_NODE){
             const text = currentNode.textContent || ''
 
-            // looking for {#each x as y}
+            /**
+             * looking for {#each x as y}
+             */ 
             const eachStartRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
-            const startMatch = text.match(eachStartRegex);
+            const eachStartMatch = text.match(eachStartRegex);
 
-            //console.log('text, match', )
-
-            if(startMatch){
+            if(eachStartMatch){
                 //console.log('startMatch', startMatch)
 
-                currentlyUnclosedBlocks.push(EACH)
+                currentlyOpenBlocks.push(EACH)
                 
                 if(insideAnOpenBlock){
                     // do nothing 
                 }
                 else{
-                    let [_, _iterableExpression, _itemExpression] = startMatch
+                    let [_, _iterableExpression, _itemExpression] = eachStartMatch
                     
                     eachBlockIterableExpression = _iterableExpression
                     eachBlockItemExpression = _itemExpression
-                    eachBlockOpeningNode = currentNode
+                    eachOpeningMarkerNode = currentNode
                 }
             }
 
-            // trying to find an {/each}
+
+            /**
+             * Looking for {/each}
+             */
             const eachClosingBlockString = '{/each}'
             const isEachClosingBlock = text.includes(eachClosingBlockString)
 
@@ -331,33 +359,111 @@ function fillTemplatedOdtElement(rootElement, compartment){
 
                 //console.log('isEachClosingBlock', isEachClosingBlock)
 
-                if(!eachBlockOpeningNode)
+                if(!eachOpeningMarkerNode)
                     throw new Error(`{/each} found without corresponding opening {#each x as y}`)
                 
-                if(currentlyUnclosedBlocks.at(-1) !== EACH)
+                if(currentlyOpenBlocks.at(-1) !== EACH)
                     throw new Error(`{/each} found while the last opened block was not an opening {#each x as y}`)
 
-                if(currentlyUnclosedBlocks.filter(x => x === EACH).length > 1){
-                    // ignore because it will be treated as part of the outer {#each}
-                }
-                else{
-                    eachBlockClosingNode = currentNode
+                if(currentlyOpenBlocks.length === 1){
+                    eachClosingMarkerNode = currentNode
                     
-                    // found an #each and its corresponding /each
+                    // found an {#each} and its corresponding {/each}
                     // execute replacement loop
-                    fillEachBlock(eachBlockOpeningNode, eachBlockIterableExpression, eachBlockItemExpression, eachBlockClosingNode, compartment)
+                    fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment)
 
-                    eachBlockOpeningNode = undefined
+                    eachOpeningMarkerNode = undefined
                     eachBlockIterableExpression = undefined
                     eachBlockItemExpression = undefined 
-                    eachBlockClosingNode = undefined
+                    eachClosingMarkerNode = undefined
+                }
+                else{
+                    // ignore because it will be treated as part of the outer {#each}
                 }
 
-                currentlyUnclosedBlocks.pop()
+                currentlyOpenBlocks.pop()
             }
 
 
-            // Looking for variables for substitutions
+            /**
+             * Looking for {#if ...}
+             */
+            const ifStartRegex = /{#if\s+([^}]+?)\s*}/;
+            const ifStartMatch = text.match(ifStartRegex);
+
+            if(ifStartMatch){
+                currentlyOpenBlocks.push(IF)
+                
+                if(insideAnOpenBlock){
+                    // do nothing because the marker is too deep
+                }
+                else{
+                    let [_, _ifBlockConditionExpression] = ifStartMatch
+                    
+                    ifBlockConditionExpression = _ifBlockConditionExpression
+                    ifOpeningMarkerNode = currentNode
+                }
+            }
+
+
+            /**
+             * Looking for {:else}
+             */
+            const elseMarker = '{:else}'
+            const hasElseMarker = text.includes(elseMarker);
+
+            if(hasElseMarker){      
+                if(!insideAnOpenBlock)
+                    throw new Error('{:else} without a corresponding {#if}')
+                
+                if(currentlyOpenBlocks.length === 1){
+                    if(currentlyOpenBlocks[0] === IF){
+                        ifElseMarkerNode = currentNode
+                    }
+                    else
+                        throw new Error('{:else} inside an {#each} but without a corresponding {#if}')
+                }
+                else{
+                    // do nothing because the marker is too deep
+                }
+            }
+
+
+            /**
+             * Looking for {/if}
+             */
+            const closingIfMarker = '{/if}'
+            const hasClosingMarker = text.includes(closingIfMarker);
+
+            if(hasClosingMarker){            
+                if(!insideAnOpenBlock)
+                    throw new Error('{/if} without a corresponding {#if}')
+
+                if(currentlyOpenBlocks.length === 1){
+                    if(currentlyOpenBlocks[0] === IF){
+                        ifClosingMarkerNode = currentNode
+
+                        // found an {#if} and its corresponding {/if}
+                        // execute replacement loop
+                        fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment)
+
+                        ifOpeningMarkerNode = undefined
+                        ifElseMarkerNode = undefined
+                        ifClosingMarkerNode = undefined
+                        ifBlockConditionExpression = undefined
+                    }
+                    else
+                        throw new Error('{/if} inside an {#each} but without a corresponding {#if}')
+                }
+                else{
+                    // do nothing because the marker is too deep
+                }
+            }
+
+
+            /**
+             * Looking for variables for substitutions
+             */
             if(!insideAnOpenBlock){
                 // @ts-ignore
                 if (currentNode.data) {
@@ -374,7 +480,7 @@ function fillTemplatedOdtElement(rootElement, compartment){
                 }
             }
             else{
-                // ignore because it will be treated as part of the {#each} block
+                // ignore because it will be treated as part of the outer {#each} block
             }
         }
 
