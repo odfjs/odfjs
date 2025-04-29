@@ -173,28 +173,70 @@ function extractBlockContent(blockStartNode, blockEndNode){
  * @param {Compartment} compartment 
  */
 function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment){
-    console.log('fillIfBlock pas encore codée')
-
     const conditionValue = compartment.evaluate(ifBlockConditionExpression)
 
-    if(conditionValue){
-        // récupérer le morceau entre ifOpeningMarkerNode et ifElseMarkerNode
-        // l'executer
+    let startChild
+    let endChild
+
+    let markerNodes = new Set()
+
+    let chosenFragment
+
+    if(ifElseMarkerNode){
+        const {
+            startChild: startIfThenChild, 
+            endChild: endIfThenChild, 
+            content: thenFragment
+        } = extractBlockContent(ifOpeningMarkerNode, ifElseMarkerNode)
+
+        const {
+            startChild: startIfElseChild, 
+            endChild: endIfElseChild, 
+            content: elseFragment
+        } = extractBlockContent(ifElseMarkerNode, ifClosingMarkerNode)
+
+        chosenFragment = conditionValue ? thenFragment : elseFragment
+        startChild = startIfThenChild
+        endChild = endIfElseChild
+
+        markerNodes
+            .add(startIfThenChild).add(endIfThenChild)
+            .add(startIfElseChild).add(endIfElseChild)
     }
     else{
+        const {
+            startChild: startIfThenChild, 
+            endChild: endIfThenChild, 
+            content: thenFragment
+        } = extractBlockContent(ifOpeningMarkerNode, ifClosingMarkerNode)
 
+        chosenFragment = conditionValue ? thenFragment : undefined
+        startChild = startIfThenChild
+        endChild = endIfThenChild
+
+        markerNodes
+            .add(startIfThenChild).add(endIfThenChild)
     }
 
-    // dans tous les cas, recupérer ce qu'il y a entre ifOpeningMarkerNode et ifClosingMarkerNode
-    // et le supprimer de l'arbre
 
+    if(chosenFragment){
+        fillTemplatedOdtElement(
+            chosenFragment, 
+            compartment
+        )
 
+        endChild.parentNode.insertBefore(chosenFragment, endChild)
+    }
 
-    /*throw `PPP
-        - executer l'expression
-        - selon la valeur, choisir le bon block à extraire/remplir
-        - 
-    `*/
+    for(const markerNode of markerNodes){
+        try{
+            // may throw if node already out of tree
+            // might happen if 
+            markerNode.parentNode.removeChild(markerNode)
+        }
+        catch(e){}
+    }
+
 }
 
 
@@ -242,7 +284,7 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         endChild.parentNode.insertBefore(itemFragment, endChild)
     }
 
-    // remove block elements
+    // remove block marker elements
     startChild.parentNode.removeChild(startChild)
     endChild.parentNode.removeChild(endChild)
 }

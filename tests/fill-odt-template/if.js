@@ -10,10 +10,10 @@ test('basic template filling with {#if}', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/description-nombre.odt')
     const templateContent = `Description du nombre {n}
 
-{#if n >5}
-n est un grand nombre
-{:else}
+{#if n<5}
 n est un petit nombre
+{:else}
+n est un grand nombre
 {/if}
 `
 
