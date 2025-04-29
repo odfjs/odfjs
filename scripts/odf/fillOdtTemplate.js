@@ -91,41 +91,25 @@ function findPlacesToFillInString(str, compartment) {
 
 
 /**
+ * Content between blockStartNode and blockEndNode is extracted to a documentFragment
+ * The original document is modified because nodes are removed from it to be part of the returned documentFragment
  * 
- * @param {Node} ifOpeningMarkerNode 
- * @param {Node | undefined} ifElseMarkerNode 
- * @param {Node} ifClosingMarkerNode 
- * @param {string} ifBlockConditionExpression 
- * @param {Compartment} compartment 
- */
-function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment){
-    throw `PPP
-        - executer l'expression
-        - selon la valeur, choisir le bon block à extraire/remplir
-        - 
-    `
-}
-
-
-/**
+ * startChild and endChild are ancestors of, respectively, blockStartNode and blockEndNode
+ * and startChild.parentNode === endChild.parentNode
  * 
- * @param {Node} startNode 
- * @param {string} iterableExpression 
- * @param {string} itemExpression 
- * @param {Node} endNode 
- * @param {Compartment} compartment 
+ * @precondition blockStartNode needs to be before blockEndNode in document order
+ * 
+ * @param {Node} blockStartNode 
+ * @param {Node} blockEndNode 
+ * @returns {{startChild: Node, endChild:Node, content: DocumentFragment}}
  */
-function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment){
-    //console.log('fillEachBlock', iterableExpression, itemExpression)
-    //console.log('startNode', startNode.nodeType, startNode.nodeName)
-    //console.log('endNode', endNode.nodeType, endNode.nodeName)
-
-    // find common ancestor
+function extractBlockContent(blockStartNode, blockEndNode){
+    // find common ancestor of blockStartNode and blockEndNode
     let commonAncestor
 
-    let startAncestor = startNode
-    let endAncestor = endNode
-    
+    let startAncestor = blockStartNode
+    let endAncestor = blockEndNode
+
     const startAncestry = new Set([startAncestor])
     const endAncestry = new Set([endAncestor]) 
 
@@ -147,23 +131,14 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         commonAncestor = startAncestor
     }
 
-
-    //console.log('commonAncestor', commonAncestor.tagName)
-    //console.log('startAncestry', startAncestry.size, [...startAncestry].indexOf(commonAncestor))
-    //console.log('endAncestry', endAncestry.size, [...endAncestry].indexOf(commonAncestor))
-
     const startAncestryToCommonAncestor = [...startAncestry].slice(0, [...startAncestry].indexOf(commonAncestor))
     const endAncestryToCommonAncestor = [...endAncestry].slice(0, [...endAncestry].indexOf(commonAncestor))
 
     const startChild = startAncestryToCommonAncestor.at(-1)
     const endChild = endAncestryToCommonAncestor.at(-1)
 
-    //console.log('startChild', startChild.tagName)
-    //console.log('endChild', endChild.tagName)
-
-    // Find repeatable pattern and extract it in a documentFragment
-    // @ts-ignore
-    const repeatedFragment = startNode.ownerDocument.createDocumentFragment()
+    // Extract DOM content in a documentFragment
+    const contentFragment = blockStartNode.ownerDocument.createDocumentFragment()
 
     /** @type {Element[]} */
     const repeatedPatternArray = []
@@ -174,14 +149,70 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         sibling = sibling.nextSibling;
     }
 
-
-    //console.log('repeatedPatternArray', repeatedPatternArray.length)
-
     for(const sibling of repeatedPatternArray){
         sibling.parentNode?.removeChild(sibling)
-        repeatedFragment.appendChild(sibling)
+        contentFragment.appendChild(sibling)
     }
 
+    return {
+        startChild,
+        endChild,
+        content: contentFragment
+    }
+}
+
+
+
+
+/**
+ * 
+ * @param {Node} ifOpeningMarkerNode 
+ * @param {Node | undefined} ifElseMarkerNode 
+ * @param {Node} ifClosingMarkerNode 
+ * @param {string} ifBlockConditionExpression 
+ * @param {Compartment} compartment 
+ */
+function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment){
+    console.log('fillIfBlock pas encore codée')
+
+    const conditionValue = compartment.evaluate(ifBlockConditionExpression)
+
+    if(conditionValue){
+        // récupérer le morceau entre ifOpeningMarkerNode et ifElseMarkerNode
+        // l'executer
+    }
+    else{
+
+    }
+
+    // dans tous les cas, recupérer ce qu'il y a entre ifOpeningMarkerNode et ifClosingMarkerNode
+    // et le supprimer de l'arbre
+
+
+
+    /*throw `PPP
+        - executer l'expression
+        - selon la valeur, choisir le bon block à extraire/remplir
+        - 
+    `*/
+}
+
+
+/**
+ * 
+ * @param {Node} startNode 
+ * @param {string} iterableExpression 
+ * @param {string} itemExpression 
+ * @param {Node} endNode 
+ * @param {Compartment} compartment 
+ */
+function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment){
+    //console.log('fillEachBlock', iterableExpression, itemExpression)
+    //console.log('startNode', startNode.nodeType, startNode.nodeName)
+    //console.log('endNode', endNode.nodeType, endNode.nodeName)
+
+    const {startChild, endChild, content: repeatedFragment} = extractBlockContent(startNode, endNode)
+    
     // Find the iterable in the data
     // PPP eventually, evaluate the expression as a JS expression
     let iterable = compartment.evaluate(iterableExpression)
@@ -207,10 +238,11 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
             itemFragment, 
             insideCompartment
         )
-        // @ts-ignore
-        commonAncestor.insertBefore(itemFragment, endChild)
+        
+        endChild.parentNode.insertBefore(itemFragment, endChild)
     }
 
+    // remove block elements
     startChild.parentNode.removeChild(startChild)
     endChild.parentNode.removeChild(endChild)
 }
