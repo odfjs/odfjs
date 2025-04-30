@@ -303,75 +303,7 @@ const EACH = 'EACH'
 function fillTemplatedOdtElement(rootElement, compartment){
     //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName)
 
-    // Perform a first traverse to split textnodes when they contain several block markers
-    traverse(rootElement, currentNode => {
-        if(currentNode.nodeType === Node.TEXT_NODE){
-            // trouver tous les débuts et fin de each et découper le textNode
-
-            let remainingText = currentNode.textContent || ''
-
-            while(remainingText.length >= 1){
-                let match;
-
-                // looking for opening {#each ...} block
-                const eachBlockOpeningRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
-                const eachBlockClosingRegex = /{\/each}/;
-
-                for(const regexp of [eachBlockOpeningRegex, eachBlockClosingRegex]){
-                    let thisMatch = remainingText.match(regexp)
-
-                    // trying to find only the first match in remainingText string
-                    // @ts-ignore
-                    if(thisMatch && (!match || match.index > thisMatch.index)){
-                        match = thisMatch
-                    }
-                }
-
-                if(match){
-                    // split 3-way : before-match, match and after-match
-
-                    if(match[0].length < remainingText.length){
-                        // @ts-ignore
-                        let afterMatchTextNode = currentNode.splitText(match.index + match[0].length)
-                        if(afterMatchTextNode.textContent && afterMatchTextNode.textContent.length >= 1){
-                            remainingText = afterMatchTextNode.textContent
-                        }
-                        else{
-                            remainingText = ''
-                        }
-
-                        // per spec, currentNode now contains before-match and match text
-                    
-                        // @ts-ignore
-                        if(match.index > 0){
-                            // @ts-ignore
-                            currentNode.splitText(match.index)
-                        }
-
-                        if(afterMatchTextNode){
-                            currentNode = afterMatchTextNode
-                        }
-                    }
-                    else{
-                        remainingText = ''
-                    }
-                }
-                else{
-                    remainingText = ''
-                }
-            }
-
-        }
-        else{
-            // skip
-        }
-    })
-
-    // now, each Node contains at most one block marker
-
-
     let currentlyOpenBlocks = []
-
 
     /** @type {Node | undefined} */
     let eachOpeningMarkerNode
@@ -579,8 +511,88 @@ function fillTemplatedOdtElement(rootElement, compartment){
 }
 
 
-const keptFiles = new Set(['content.xml', 'styles.xml', 'mimetype', 'META-INF/manifest.xml'])
 
+/**
+ * 
+ * @param {Document} document 
+ * @param {Compartment} compartment 
+ * @returns {void}
+ */
+function fillTemplatedOdtDocument(document, compartment){
+
+    // prepare tree to be used as template
+    // Perform a first traverse to split textnodes when they contain several block markers
+    traverse(document, currentNode => {
+        if(currentNode.nodeType === Node.TEXT_NODE){
+            // trouver tous les débuts et fin de each et découper le textNode
+
+            let remainingText = currentNode.textContent || ''
+
+            while(remainingText.length >= 1){
+                let match;
+
+                // looking for opening {#each ...} block
+                const eachBlockOpeningRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
+                const eachBlockClosingRegex = /{\/each}/;
+
+                for(const regexp of [eachBlockOpeningRegex, eachBlockClosingRegex]){
+                    let thisMatch = remainingText.match(regexp)
+
+                    // trying to find only the first match in remainingText string
+                    // @ts-ignore
+                    if(thisMatch && (!match || match.index > thisMatch.index)){
+                        match = thisMatch
+                    }
+                }
+
+                if(match){
+                    // split 3-way : before-match, match and after-match
+
+                    if(match[0].length < remainingText.length){
+                        // @ts-ignore
+                        let afterMatchTextNode = currentNode.splitText(match.index + match[0].length)
+                        if(afterMatchTextNode.textContent && afterMatchTextNode.textContent.length >= 1){
+                            remainingText = afterMatchTextNode.textContent
+                        }
+                        else{
+                            remainingText = ''
+                        }
+
+                        // per spec, currentNode now contains before-match and match text
+                    
+                        // @ts-ignore
+                        if(match.index > 0){
+                            // @ts-ignore
+                            currentNode.splitText(match.index)
+                        }
+
+                        if(afterMatchTextNode){
+                            currentNode = afterMatchTextNode
+                        }
+                    }
+                    else{
+                        remainingText = ''
+                    }
+                }
+                else{
+                    remainingText = ''
+                }
+            }
+
+        }
+        else{
+            // skip
+        }
+    })
+
+    // now, each Node contains at most one block marker
+
+    fillTemplatedOdtElement(document, compartment)
+}
+
+
+
+const keptFiles = new Set(['content.xml', 'styles.xml', 'mimetype', 'META-INF/manifest.xml'])
 
 /**
  * 
@@ -650,7 +662,7 @@ export default async function fillOdtTemplate(odtTemplate, data) {
                         __options__: true
                     })
 
-                    fillTemplatedOdtElement(contentDocument, compartment) 
+                    fillTemplatedOdtDocument(contentDocument, compartment) 
                     
                     const updatedContentXml = serializeToString(contentDocument)
 
