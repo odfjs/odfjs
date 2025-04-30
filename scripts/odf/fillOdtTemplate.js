@@ -293,6 +293,15 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 const IF = 'IF'
 const EACH = 'EACH'
 
+// the regexps below are shared, so they shoudn't have state (no 'g' flag)
+const ifStartRegex = /{#if\s+([^}]+?)\s*}/;
+const elseMarker = '{:else}'
+const closingIfMarker = '{/if}'
+
+const eachStartMarkerRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
+const eachClosingBlockString = '{/each}'
+
+
 
 /**
  * 
@@ -334,8 +343,7 @@ function fillTemplatedOdtElement(rootElement, compartment){
             /**
              * looking for {#each x as y}
              */ 
-            const eachStartRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
-            const eachStartMatch = text.match(eachStartRegex);
+            const eachStartMatch = text.match(eachStartMarkerRegex);
 
             if(eachStartMatch){
                 //console.log('startMatch', startMatch)
@@ -358,7 +366,6 @@ function fillTemplatedOdtElement(rootElement, compartment){
             /**
              * Looking for {/each}
              */
-            const eachClosingBlockString = '{/each}'
             const isEachClosingBlock = text.includes(eachClosingBlockString)
 
             if(isEachClosingBlock){
@@ -394,7 +401,6 @@ function fillTemplatedOdtElement(rootElement, compartment){
             /**
              * Looking for {#if ...}
              */
-            const ifStartRegex = /{#if\s+([^}]+?)\s*}/;
             const ifStartMatch = text.match(ifStartRegex);
 
             if(ifStartMatch){
@@ -415,7 +421,6 @@ function fillTemplatedOdtElement(rootElement, compartment){
             /**
              * Looking for {:else}
              */
-            const elseMarker = '{:else}'
             const hasElseMarker = text.includes(elseMarker);
 
             if(hasElseMarker){      
@@ -438,7 +443,6 @@ function fillTemplatedOdtElement(rootElement, compartment){
             /**
              * Looking for {/if}
              */
-            const closingIfMarker = '{/if}'
             const hasClosingMarker = text.includes(closingIfMarker);
 
             if(hasClosingMarker){            
@@ -529,28 +533,42 @@ function fillTemplatedOdtDocument(document, compartment){
             let remainingText = currentNode.textContent || ''
 
             while(remainingText.length >= 1){
-                let match;
+                let matchText;
+                let matchIndex;
 
-                // looking for opening {#each ...} block
-                const eachBlockOpeningRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
-                const eachBlockClosingRegex = /{\/each}/;
+                // looking for a block marker
+                for(const marker of [ifStartRegex, elseMarker, closingIfMarker, eachStartMarkerRegex, eachClosingBlockString]){
+                    if(typeof marker === 'string'){
+                        const index = remainingText.indexOf(marker)
+                        
+                        if(index !== -1){
+                            matchText = marker
+                            matchIndex = index
 
-                for(const regexp of [eachBlockOpeningRegex, eachBlockClosingRegex]){
-                    let thisMatch = remainingText.match(regexp)
+                            // found the first match
+                            break; // get out of loop
+                        }
+                    }
+                    else{
+                        // marker is a RegExp
+                        const match = remainingText.match(marker)
 
-                    // trying to find only the first match in remainingText string
-                    // @ts-ignore
-                    if(thisMatch && (!match || match.index > thisMatch.index)){
-                        match = thisMatch
+                        if(match){
+                            matchText = match[0]
+                            matchIndex = match.index
+
+                            // found the first match
+                            break; // get out of loop
+                        }
                     }
                 }
 
-                if(match){
+                if(matchText){
                     // split 3-way : before-match, match and after-match
 
-                    if(match[0].length < remainingText.length){
+                    if(matchText.length < remainingText.length){
                         // @ts-ignore
-                        let afterMatchTextNode = currentNode.splitText(match.index + match[0].length)
+                        let afterMatchTextNode = currentNode.splitText(matchIndex + matchText.length)
                         if(afterMatchTextNode.textContent && afterMatchTextNode.textContent.length >= 1){
                             remainingText = afterMatchTextNode.textContent
                         }
@@ -561,9 +579,9 @@ function fillTemplatedOdtDocument(document, compartment){
                         // per spec, currentNode now contains before-match and match text
                     
                         // @ts-ignore
-                        if(match.index > 0){
+                        if(matchIndex > 0){
                             // @ts-ignore
-                            currentNode.splitText(match.index)
+                            currentNode.splitText(matchIndex)
                         }
 
                         if(afterMatchTextNode){
