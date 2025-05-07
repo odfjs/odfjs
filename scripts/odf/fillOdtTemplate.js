@@ -3,6 +3,11 @@ import { ZipReader, ZipWriter, BlobReader, BlobWriter, TextReader, Uint8ArrayRea
 import {traverse, parseXML, serializeToString, Node} from '../DOMUtils.js'
 import {makeManifestFile, getManifestFileData} from './manifest.js';
 
+import 'ses'
+
+lockdown();
+
+
 /** @import {Reader, ZipWriterAddDataOptions} from '@zip.js/zip.js' */
 /** @import {ODFManifest} from './manifest.js' */
 
@@ -18,41 +23,17 @@ const ODTMimetype = 'application/vnd.oasis.opendocument.text'
 /**
  * @typedef TextPlaceToFill
  * @property { {expression: string, replacedString:string}[] } expressions
- * @property {(values: any) => void} fill
+ * @property {() => void} fill
  */
 
-
-/**
- * PPP : for now, expression is expected to be only an object property name or a dot-path
- * in the future, it will certainly be a JavaScript expression
- * securely evaluated within an hardernedJS Compartment https://hardenedjs.org/#compartment
- * @param {string} expression 
- * @param {any} context - data / global object
- * @return {any}
- */
-function evaluateTemplateExpression(expression, context){
-    const parts = expression.trim().split('.')
-
-    let value = context;
-
-    for(const part of parts){
-        if(!value){
-            return undefined
-        }
-        else{
-            value = value[part]
-        }
-    }
-
-    return value
-}
 
 
 /**
  * @param {string} str
+ * @param {Compartment} compartment 
  * @returns {TextPlaceToFill | undefined}
  */
-function findPlacesToFillInString(str) {
+function findPlacesToFillInString(str, compartment) {
     const matches = str.matchAll(/\{([^{#\/]+?)\}/g)
 
     /** @type {TextPlaceToFill['expressions']} */
@@ -75,8 +56,7 @@ function findPlacesToFillInString(str) {
         if (fixedPart.length >= 1)
             parts.push(fixedPart)
 
-        
-        parts.push(data => evaluateTemplateExpression(expression, data))
+        parts.push(() => compartment.evaluate(expression))
 
         remaining = newRemaining
     }
@@ -110,27 +90,26 @@ function findPlacesToFillInString(str) {
 }
 
 
-
 /**
+ * Content between blockStartNode and blockEndNode is extracted to a documentFragment
+ * The original document is modified because nodes are removed from it to be part of the returned documentFragment
  * 
- * @param {Node} startNode 
- * @param {string} iterableExpression 
- * @param {string} itemExpression 
- * @param {Node} endNode 
- * @param {any} data 
- * @param {typeof Node} Node
+ * startChild and endChild are ancestors of, respectively, blockStartNode and blockEndNode
+ * and startChild.parentNode === endChild.parentNode
+ * 
+ * @precondition blockStartNode needs to be before blockEndNode in document order
+ * 
+ * @param {Node} blockStartNode 
+ * @param {Node} blockEndNode 
+ * @returns {{startChild: Node, endChild:Node, content: DocumentFragment}}
  */
-function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, data, Node){
-    //console.log('fillEachBlock', iterableExpression, itemExpression)
-    //console.log('startNode', startNode.nodeType, startNode.nodeName)
-    //console.log('endNode', endNode.nodeType, endNode.nodeName)
-
-    // find common ancestor
+function extractBlockContent(blockStartNode, blockEndNode){
+    // find common ancestor of blockStartNode and blockEndNode
     let commonAncestor
 
-    let startAncestor = startNode
-    let endAncestor = endNode
-    
+    let startAncestor = blockStartNode
+    let endAncestor = blockEndNode
+
     const startAncestry = new Set([startAncestor])
     const endAncestry = new Set([endAncestor]) 
 
@@ -152,23 +131,14 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
         commonAncestor = startAncestor
     }
 
-
-    //console.log('commonAncestor', commonAncestor.tagName)
-    //console.log('startAncestry', startAncestry.size, [...startAncestry].indexOf(commonAncestor))
-    //console.log('endAncestry', endAncestry.size, [...endAncestry].indexOf(commonAncestor))
-
     const startAncestryToCommonAncestor = [...startAncestry].slice(0, [...startAncestry].indexOf(commonAncestor))
     const endAncestryToCommonAncestor = [...endAncestry].slice(0, [...endAncestry].indexOf(commonAncestor))
 
     const startChild = startAncestryToCommonAncestor.at(-1)
     const endChild = endAncestryToCommonAncestor.at(-1)
 
-    //console.log('startChild', startChild.tagName)
-    //console.log('endChild', endChild.tagName)
-
-    // Find repeatable pattern and extract it in a documentFragment
-    // @ts-ignore
-    const repeatedFragment = startNode.ownerDocument.createDocumentFragment()
+    // Extract DOM content in a documentFragment
+    const contentFragment = blockStartNode.ownerDocument.createDocumentFragment()
 
     /** @type {Element[]} */
     const repeatedPatternArray = []
@@ -179,17 +149,115 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
         sibling = sibling.nextSibling;
     }
 
-
-    //console.log('repeatedPatternArray', repeatedPatternArray.length)
-
     for(const sibling of repeatedPatternArray){
         sibling.parentNode?.removeChild(sibling)
-        repeatedFragment.appendChild(sibling)
+        contentFragment.appendChild(sibling)
     }
 
+    return {
+        startChild,
+        endChild,
+        content: contentFragment
+    }
+}
+
+
+
+
+/**
+ * 
+ * @param {Node} ifOpeningMarkerNode 
+ * @param {Node | undefined} ifElseMarkerNode 
+ * @param {Node} ifClosingMarkerNode 
+ * @param {string} ifBlockConditionExpression 
+ * @param {Compartment} compartment 
+ */
+function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment){
+    const conditionValue = compartment.evaluate(ifBlockConditionExpression)
+
+    let startChild
+    let endChild
+
+    let markerNodes = new Set()
+
+    let chosenFragment
+
+    if(ifElseMarkerNode){
+        const {
+            startChild: startIfThenChild, 
+            endChild: endIfThenChild, 
+            content: thenFragment
+        } = extractBlockContent(ifOpeningMarkerNode, ifElseMarkerNode)
+
+        const {
+            startChild: startIfElseChild, 
+            endChild: endIfElseChild, 
+            content: elseFragment
+        } = extractBlockContent(ifElseMarkerNode, ifClosingMarkerNode)
+
+        chosenFragment = conditionValue ? thenFragment : elseFragment
+        startChild = startIfThenChild
+        endChild = endIfElseChild
+
+        markerNodes
+            .add(startIfThenChild).add(endIfThenChild)
+            .add(startIfElseChild).add(endIfElseChild)
+    }
+    else{
+        const {
+            startChild: startIfThenChild, 
+            endChild: endIfThenChild, 
+            content: thenFragment
+        } = extractBlockContent(ifOpeningMarkerNode, ifClosingMarkerNode)
+
+        chosenFragment = conditionValue ? thenFragment : undefined
+        startChild = startIfThenChild
+        endChild = endIfThenChild
+
+        markerNodes
+            .add(startIfThenChild).add(endIfThenChild)
+    }
+
+
+    if(chosenFragment){
+        fillTemplatedOdtElement(
+            chosenFragment, 
+            compartment
+        )
+
+        endChild.parentNode.insertBefore(chosenFragment, endChild)
+    }
+
+    for(const markerNode of markerNodes){
+        try{
+            // may throw if node already out of tree
+            // might happen if 
+            markerNode.parentNode.removeChild(markerNode)
+        }
+        catch(e){}
+    }
+
+}
+
+
+/**
+ * 
+ * @param {Node} startNode 
+ * @param {string} iterableExpression 
+ * @param {string} itemExpression 
+ * @param {Node} endNode 
+ * @param {Compartment} compartment 
+ */
+function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment){
+    //console.log('fillEachBlock', iterableExpression, itemExpression)
+    //console.log('startNode', startNode.nodeType, startNode.nodeName)
+    //console.log('endNode', endNode.nodeType, endNode.nodeName)
+
+    const {startChild, endChild, content: repeatedFragment} = extractBlockContent(startNode, endNode)
+    
     // Find the iterable in the data
     // PPP eventually, evaluate the expression as a JS expression
-    let iterable = evaluateTemplateExpression(iterableExpression, data)
+    let iterable = compartment.evaluate(iterableExpression)
     if(!iterable || typeof iterable[Symbol.iterator] !== 'function'){
         // when there is no iterable, silently replace with empty array
         iterable = []
@@ -202,60 +270,305 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, d
         // @ts-ignore
         const itemFragment = repeatedFragment.cloneNode(true)
 
+        let insideCompartment = new Compartment({
+            globals: Object.assign({}, compartment.globalThis, {[itemExpression]: item}),
+            __options__: true
+        })
+
         // recursive call to fillTemplatedOdtElement on itemFragment
         fillTemplatedOdtElement(
             itemFragment, 
-            Object.assign({}, data, {[itemExpression]: item}),
-            Node
+            insideCompartment
         )
-        // @ts-ignore
-        commonAncestor.insertBefore(itemFragment, endChild)
+        
+        endChild.parentNode.insertBefore(itemFragment, endChild)
     }
 
+    // remove block marker elements
     startChild.parentNode.removeChild(startChild)
     endChild.parentNode.removeChild(endChild)
+}
+
+
+const IF = 'IF'
+const EACH = 'EACH'
+
+// the regexps below are shared, so they shoudn't have state (no 'g' flag)
+const ifStartRegex = /{#if\s+([^}]+?)\s*}/;
+const elseMarker = '{:else}'
+const closingIfMarker = '{/if}'
+
+const eachStartMarkerRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
+const eachClosingBlockString = '{/each}'
+
+
+
+/**
+ * 
+ * @param {Element | DocumentFragment | Document} rootElement 
+ * @param {Compartment} compartment 
+ * @returns {void}
+ */
+function fillTemplatedOdtElement(rootElement, compartment){
+    //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName)
+
+    let currentlyOpenBlocks = []
+
+    /** @type {Node | undefined} */
+    let eachOpeningMarkerNode
+    /** @type {Node | undefined} */
+    let eachClosingMarkerNode
+
+    let eachBlockIterableExpression, eachBlockItemExpression;
+
+
+    /** @type {Node | undefined} */
+    let ifOpeningMarkerNode
+    /** @type {Node | undefined} */
+    let ifElseMarkerNode
+    /** @type {Node | undefined} */
+    let ifClosingMarkerNode
+
+    let ifBlockConditionExpression
+    // Traverse "in document order"
+
+    // @ts-ignore
+    traverse(rootElement, currentNode => {
+        //console.log('currentlyUnclosedBlocks', currentlyUnclosedBlocks)
+        const insideAnOpenBlock = currentlyOpenBlocks.length >= 1
+
+        if(currentNode.nodeType === Node.TEXT_NODE){
+            const text = currentNode.textContent || ''
+
+            /**
+             * looking for {#each x as y}
+             */ 
+            const eachStartMatch = text.match(eachStartMarkerRegex);
+
+            if(eachStartMatch){
+                //console.log('startMatch', startMatch)
+
+                currentlyOpenBlocks.push(EACH)
+                
+                if(insideAnOpenBlock){
+                    // do nothing 
+                }
+                else{
+                    let [_, _iterableExpression, _itemExpression] = eachStartMatch
+                    
+                    eachBlockIterableExpression = _iterableExpression
+                    eachBlockItemExpression = _itemExpression
+                    eachOpeningMarkerNode = currentNode
+                }
+            }
+
+
+            /**
+             * Looking for {/each}
+             */
+            const isEachClosingBlock = text.includes(eachClosingBlockString)
+
+            if(isEachClosingBlock){
+
+                //console.log('isEachClosingBlock', isEachClosingBlock)
+
+                if(!eachOpeningMarkerNode)
+                    throw new Error(`{/each} found without corresponding opening {#each x as y}`)
+                
+                if(currentlyOpenBlocks.at(-1) !== EACH)
+                    throw new Error(`{/each} found while the last opened block was not an opening {#each x as y}`)
+
+                if(currentlyOpenBlocks.length === 1){
+                    eachClosingMarkerNode = currentNode
+                    
+                    // found an {#each} and its corresponding {/each}
+                    // execute replacement loop
+                    fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment)
+
+                    eachOpeningMarkerNode = undefined
+                    eachBlockIterableExpression = undefined
+                    eachBlockItemExpression = undefined 
+                    eachClosingMarkerNode = undefined
+                }
+                else{
+                    // ignore because it will be treated as part of the outer {#each}
+                }
+
+                currentlyOpenBlocks.pop()
+            }
+
+
+            /**
+             * Looking for {#if ...}
+             */
+            const ifStartMatch = text.match(ifStartRegex);
+
+            if(ifStartMatch){
+                currentlyOpenBlocks.push(IF)
+                
+                if(insideAnOpenBlock){
+                    // do nothing because the marker is too deep
+                }
+                else{
+                    let [_, _ifBlockConditionExpression] = ifStartMatch
+                    
+                    ifBlockConditionExpression = _ifBlockConditionExpression
+                    ifOpeningMarkerNode = currentNode
+                }
+            }
+
+
+            /**
+             * Looking for {:else}
+             */
+            const hasElseMarker = text.includes(elseMarker);
+
+            if(hasElseMarker){      
+                if(!insideAnOpenBlock)
+                    throw new Error('{:else} without a corresponding {#if}')
+                
+                if(currentlyOpenBlocks.length === 1){
+                    if(currentlyOpenBlocks[0] === IF){
+                        ifElseMarkerNode = currentNode
+                    }
+                    else
+                        throw new Error('{:else} inside an {#each} but without a corresponding {#if}')
+                }
+                else{
+                    // do nothing because the marker is too deep
+                }
+            }
+
+
+            /**
+             * Looking for {/if}
+             */
+            const hasClosingMarker = text.includes(closingIfMarker);
+
+            if(hasClosingMarker){            
+                if(!insideAnOpenBlock)
+                    throw new Error('{/if} without a corresponding {#if}')
+
+                if(currentlyOpenBlocks.length === 1){
+                    if(currentlyOpenBlocks[0] === IF){
+                        ifClosingMarkerNode = currentNode
+
+                        // found an {#if} and its corresponding {/if}
+                        // execute replacement loop
+                        fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment)
+
+                        ifOpeningMarkerNode = undefined
+                        ifElseMarkerNode = undefined
+                        ifClosingMarkerNode = undefined
+                        ifBlockConditionExpression = undefined
+                    }
+                    else
+                        throw new Error('{/if} inside an {#each} but without a corresponding {#if}')
+                }
+                else{
+                    // do nothing because the marker is too deep
+                }
+            }
+
+
+            /**
+             * Looking for variables for substitutions
+             */
+            if(!insideAnOpenBlock){
+                // @ts-ignore
+                if (currentNode.data) {
+                    // @ts-ignore
+                    const placesToFill = findPlacesToFillInString(currentNode.data, compartment)
+
+                    if(placesToFill){
+                        const newText = placesToFill.fill()
+                        // @ts-ignore
+                        const newTextNode = currentNode.ownerDocument?.createTextNode(newText)
+                        // @ts-ignore
+                        currentNode.parentNode?.replaceChild(newTextNode, currentNode)
+                    }
+                }
+            }
+            else{
+                // ignore because it will be treated as part of the outer {#each} block
+            }
+        }
+
+        if(currentNode.nodeType === Node.ATTRIBUTE_NODE){
+            // Looking for variables for substitutions
+            if(!insideAnOpenBlock){
+                // @ts-ignore
+                if (currentNode.value) {
+                    // @ts-ignore
+                    const placesToFill = findPlacesToFillInString(currentNode.value, compartment)
+                    if(placesToFill){
+                        // @ts-ignore
+                        currentNode.value = placesToFill.fill()
+                    }
+                }
+            }
+            else{
+                // ignore because it will be treated as part of the {#each} block
+            }
+        }
+    })
 }
 
 
 
 /**
  * 
- * @param {Element | DocumentFragment} rootElement 
- * @param {any} data 
- * @param {typeof Node} Node 
+ * @param {Document} document 
+ * @param {Compartment} compartment 
  * @returns {void}
  */
-function fillTemplatedOdtElement(rootElement, data, Node){
-    //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName)
+function fillTemplatedOdtDocument(document, compartment){
 
+    // prepare tree to be used as template
     // Perform a first traverse to split textnodes when they contain several block markers
-    traverse(rootElement, currentNode => {
+    traverse(document, currentNode => {
         if(currentNode.nodeType === Node.TEXT_NODE){
             // trouver tous les débuts et fin de each et découper le textNode
 
             let remainingText = currentNode.textContent || ''
 
             while(remainingText.length >= 1){
-                let match;
+                let matchText;
+                let matchIndex;
 
-                // looking for opening {#each ...} block
-                const eachBlockOpeningRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
-                const eachBlockClosingRegex = /{\/each}/;
+                // looking for a block marker
+                for(const marker of [ifStartRegex, elseMarker, closingIfMarker, eachStartMarkerRegex, eachClosingBlockString]){
+                    if(typeof marker === 'string'){
+                        const index = remainingText.indexOf(marker)
+                        
+                        if(index !== -1){
+                            matchText = marker
+                            matchIndex = index
 
-                for(const regexp of [eachBlockOpeningRegex, eachBlockClosingRegex]){
-                    let thisMatch = remainingText.match(regexp)
+                            // found the first match
+                            break; // get out of loop
+                        }
+                    }
+                    else{
+                        // marker is a RegExp
+                        const match = remainingText.match(marker)
 
-                    // trying to find only the first match in remainingText string
-                    if(thisMatch && (!match || match.index > thisMatch.index)){
-                        match = thisMatch
+                        if(match){
+                            matchText = match[0]
+                            matchIndex = match.index
+
+                            // found the first match
+                            break; // get out of loop
+                        }
                     }
                 }
 
-                if(match){
+                if(matchText){
                     // split 3-way : before-match, match and after-match
 
-                    if(match[0].length < remainingText.length){
-                        let afterMatchTextNode = currentNode.splitText(match.index + match[0].length)
+                    if(matchText.length < remainingText.length){
+                        // @ts-ignore
+                        let afterMatchTextNode = currentNode.splitText(matchIndex + matchText.length)
                         if(afterMatchTextNode.textContent && afterMatchTextNode.textContent.length >= 1){
                             remainingText = afterMatchTextNode.textContent
                         }
@@ -265,8 +578,10 @@ function fillTemplatedOdtElement(rootElement, data, Node){
 
                         // per spec, currentNode now contains before-match and match text
                     
-                        if(match.index > 0){
-                            currentNode.splitText(match.index)
+                        // @ts-ignore
+                        if(matchIndex > 0){
+                            // @ts-ignore
+                            currentNode.splitText(matchIndex)
                         }
 
                         if(afterMatchTextNode){
@@ -290,107 +605,12 @@ function fillTemplatedOdtElement(rootElement, data, Node){
 
     // now, each Node contains at most one block marker
 
-
-
-    /** @type {Node | undefined} */
-    let eachBlockStartNode
-    /** @type {Node | undefined} */
-    let eachBlockEndNode
-
-    let nestedEach = 0
-
-    let iterableExpression, itemExpression;
-
-    // Traverse "in document order"
-
-    // @ts-ignore
-    traverse(rootElement, currentNode => {
-        const insideAnEachBlock = !!eachBlockStartNode
-
-        if(currentNode.nodeType === Node.TEXT_NODE){
-            const text = currentNode.textContent || ''
-
-            // looking for {#each x as y}
-            const eachStartRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
-            const startMatch = text.match(eachStartRegex);
-
-            if(startMatch){
-                if(insideAnEachBlock){
-                    nestedEach = nestedEach + 1
-                }
-                else{
-                    let [_, _iterableExpression, _itemExpression] = startMatch
-                    
-                    iterableExpression = _iterableExpression
-                    itemExpression = _itemExpression
-                    eachBlockStartNode = currentNode
-                }
-            }
-
-            // trying to find an {/each}
-            const eachEndRegex = /{\/each}/
-            const endMatch = text.match(eachEndRegex)
-
-            if(endMatch){                    
-                if(!eachBlockStartNode)
-                    throw new TypeError(`{/each} found without corresponding opening {#each x as y}`)
-                
-                if(nestedEach >= 1){
-                    // ignore because it will be treated as part of the outer {#each}
-                    nestedEach = nestedEach - 1
-                }
-                else{
-                    eachBlockEndNode = currentNode
-                    
-                    // found an #each and its corresponding /each
-                    // execute replacement loop
-                    fillEachBlock(eachBlockStartNode, iterableExpression, itemExpression, eachBlockEndNode, data, Node)
-
-                    eachBlockStartNode = undefined
-                    iterableExpression = undefined
-                    itemExpression = undefined 
-                    eachBlockEndNode = undefined
-                }
-            }
-
-
-            // Looking for variables for substitutions
-            if(!insideAnEachBlock){
-                if (currentNode.data) {
-                    const placesToFill = findPlacesToFillInString(currentNode.data)
-
-                    if(placesToFill){
-                        const newText = placesToFill.fill(data)
-                        const newTextNode = currentNode.ownerDocument?.createTextNode(newText)
-                        currentNode.parentNode?.replaceChild(newTextNode, currentNode)
-                    }
-                }
-            }
-            else{
-                // ignore because it will be treated as part of the {#each} block
-            }
-        }
-
-        if(currentNode.nodeType === Node.ATTRIBUTE_NODE){
-            // Looking for variables for substitutions
-            if(!insideAnEachBlock){
-                if (currentNode.value) {
-                    const placesToFill = findPlacesToFillInString(currentNode.value)
-                    if(placesToFill){
-                        currentNode.value = placesToFill.fill(data)
-                    }
-                }
-            }
-            else{
-                // ignore because it will be treated as part of the {#each} block
-            }
-        }
-    })
+    fillTemplatedOdtElement(document, compartment)
 }
 
 
-const keptFiles = new Set(['content.xml', 'styles.xml', 'mimetype', 'META-INF/manifest.xml'])
 
+const keptFiles = new Set(['content.xml', 'styles.xml', 'mimetype', 'META-INF/manifest.xml'])
 
 /**
  * 
@@ -454,7 +674,14 @@ export default async function fillOdtTemplate(odtTemplate, data) {
                     // @ts-ignore
                     const contentXml = await entry.getData(new TextWriter());
                     const contentDocument = parseXML(contentXml);
-                    fillTemplatedOdtElement(contentDocument, data, Node) 
+
+                    const compartment = new Compartment({
+                        globals: data,
+                        __options__: true
+                    })
+
+                    fillTemplatedOdtDocument(contentDocument, compartment) 
+                    
                     const updatedContentXml = serializeToString(contentDocument)
 
                     content = new TextReader(updatedContentXml)
