@@ -2,7 +2,7 @@ import {writeFile} from 'node:fs/promises'
 import {join} from 'node:path';
 
 import {getOdtTemplate} from '../scripts/odf/odtTemplate-forNode.js'
-import {fillOdtTemplate} from '../scripts/node.js'
+import {fillOdtTemplate} from '../exports.js'
 
 /*
 const templatePath = join(import.meta.dirname, '../tests/data/template-anniversaire.odt')
@@ -79,7 +79,7 @@ const data = {
 }
 */
 
-
+/*
 const templatePath = join(import.meta.dirname, '../tests/data/tableau-simple.odt')
 const data = {
     annéeConsos : [
@@ -91,7 +91,7 @@ const data = {
         { année: 2020, conso: 37859.246},
     ]
 }
-
+    */
 
 
 /*
@@ -101,6 +101,12 @@ const data = {
     commentaire : `J'adooooooore 🤩 West covinaaaaaaaaaaa 🎶`
 }
 */
+
+const templatePath = join(import.meta.dirname, '../tests/fixtures/partially-formatted-variable.odt')
+const data = {nombre : 37}
+    
+
+
 
 const odtTemplate = await getOdtTemplate(templatePath)
 const odtResult = await fillOdtTemplate(odtTemplate, data)
