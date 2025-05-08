@@ -632,11 +632,11 @@ function findNodesBetween(startNode, endNode) {
 function getNodeTextPosition(node, containerTextNodes) {
     let position = 0;
 
-    for(const currentTextNode of containerTextNodes){
-        if(currentTextNode === node){
+    for(const currentTextNode of containerTextNodes) {
+        if(currentTextNode === node) {
             return position
         }
-        else{
+        else {
             position += (currentTextNode.textContent || '').length;
         }
     }
@@ -644,8 +644,18 @@ function getNodeTextPosition(node, containerTextNodes) {
     throw new Error(`[${getNodeTextPosition.name}] None of containerTextNodes elements is equal to node`)
 }
 
-// Helper function to get the path from ancestor to descendant
+
+/** @typedef {Node[]} DOMPath  */
+
+/**
+ * get the path from ancestor to descendant
+ * 
+ * @param {Node} node 
+ * @param {Node} ancestor 
+ * @returns {DOMPath}
+ */
 function getPathToNode(node, ancestor) {
+    /** @type {DOMPath} */
     const path = [];
     let current = node;
 
@@ -657,11 +667,17 @@ function getPathToNode(node, ancestor) {
     return path;
 }
 
-// Helper function to find the point where two paths diverge
+/**
+ * find the point where two paths diverge
+ * 
+ * @param {DOMPath} path1 
+ * @param {DOMPath} path2 
+ * @returns {Node | undefined}
+ */
 function findDivergingPoint(path1, path2) {
     for(let i = 0; i < Math.min(path1.length, path2.length); i++) {
         if(path1[i] !== path2[i]) {
-            return path1[i - 1] || null; // Return the last common node
+            return path1[i - 1] || undefined; // Return the last common node
         }
     }
 
@@ -669,30 +685,64 @@ function findDivergingPoint(path1, path2) {
     return path1[Math.min(path1.length, path2.length) - 1];
 }
 
-// Helper function to handle the case where start and end nodes have a direct relationship
+/**
+ * handle the case where start and end nodes have a direct relationship
+ * @param {Text} startNode 
+ * @param {Text} endNode 
+ * @param {number} posInStartNode 
+ * @param {number} posInEndNode 
+ * @param {string} markerText 
+ */
 function consolidateDirectRelationship(startNode, endNode, posInStartNode, posInEndNode, markerText) {
     const startNodeParent = startNode.parentNode;
     const endNodeParent = endNode.parentNode;
     const document = startNode.ownerDocument;
 
+    console.log('consolidateDirectRelationship - startNodeParent === endNodeParent', startNodeParent === endNodeParent)
+
     if(startNodeParent === endNodeParent) {
         // Siblings case
-        // Preserve text before marker in start node
+        let currentNode = startNode;
+        let nextSibling;
+
+        // Handle start node - split if needed to preserve text before marker
         if(posInStartNode > 0) {
-            startNode.textContent = startNode.textContent.substring(0, posInStartNode);
-        } else {
-            startNodeParent.removeChild(startNode);
+            console.log('posInStartNode > 0', posInStartNode)
+            console.log('startNode', startNode.textContent)
+            // Split text node to preserve text before marker
+            const remainingNode = startNode.splitText(posInStartNode);
+            currentNode = remainingNode.previousSibling; // Now we'll work with the second part
+            remainingNode.parentNode?.removeChild(remainingNode)
+            console.log('remainingNode', remainingNode.textContent)
         }
 
         // Create marker node
         const markerNode = document.createTextNode(markerText);
-        startNodeParent.insertBefore(markerNode, endNode);
 
-        // Preserve text after marker in end node
-        if(posInEndNode < endNode.textContent.length) {
-            endNode.textContent = endNode.textContent.substring(posInEndNode);
+        // Insert marker after current node
+        if(currentNode.nextSibling) {
+            startNodeParent.insertBefore(markerNode, currentNode.nextSibling);
         } else {
-            endNodeParent.removeChild(endNode);
+            startNodeParent.appendChild(markerNode);
+        }
+
+        // Remove nodes between start split and end node
+        currentNode = markerNode.nextSibling;
+        while(currentNode && currentNode !== endNode) {
+            nextSibling = currentNode.nextSibling;
+            startNodeParent.removeChild(currentNode);
+            currentNode = nextSibling;
+        }
+
+        // Handle end node - split if needed to preserve text after marker
+        if(posInEndNode < endNode.textContent.length) {
+            // Split to keep text after marker
+            endNode.splitText(posInEndNode);
+            // First part (up to the split point) should be removed
+            startNodeParent.removeChild(endNode);
+        } else {
+            // No text after marker, remove the entire end node
+            startNodeParent.removeChild(endNode);
         }
     } else {
         // Handle nested case (one is ancestor of other)
@@ -775,7 +825,7 @@ function fillTemplatedOdtDocument(document, compartment) {
         let fullText = ''
         traverse(potentialMarkerContainer, node => {
             if(node.nodeType === Node.TEXT_NODE) {
-                containerTextNodesInTreeOrder.push(/** @type {Text} */ (node))
+                containerTextNodesInTreeOrder.push(/** @type {Text} */(node))
                 fullText = fullText + node.textContent
             }
         })
@@ -794,6 +844,8 @@ function fillTemplatedOdtDocument(document, compartment) {
 
             // For each marker, check if it's contained within a single text node
             for(const positionedMarker of positionedMarkers) {
+                console.log('positionedMarker', positionedMarker)
+
                 let markerStart = -1;
                 let markerEnd = -1;
                 let currentPos = 0;
@@ -844,6 +896,8 @@ function fillTemplatedOdtDocument(document, compartment) {
 
                     // Find the diverging point in the paths
                     const lowestCommonAncestorChild = findDivergingPoint(pathToStart, pathToEnd);
+
+                    console.log('lowestCommonAncestorChild', lowestCommonAncestorChild)
 
                     if(!lowestCommonAncestorChild) {
                         // Direct parent-child relationship or other simple case

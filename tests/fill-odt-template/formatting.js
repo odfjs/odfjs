@@ -5,7 +5,7 @@ import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 
 import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
 
-test('template filling {#each ...}{/each} with formating in each marker', async t => {
+test('template filling {#each ...}{/each} with formating in {#each ...} start marker', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/liste-nombres-avec-formattage.odt')
     const templateContent = `Liste de nombres
 
