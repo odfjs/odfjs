@@ -84,3 +84,31 @@ Les nombres : 3 5 8 13  !!
 `)
 
 });
+
+
+// 
+test('template filling - {/each} and text after partially formatted', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/formatting-liste-nombres-each-end-and-after-formatted.odt')
+    const templateContent = `Liste de nombres
+
+Les nombres : {#each nombres as n}{n} {/each} !!
+`
+
+    const data = {
+        nombres : [5,8, 13, 21]
+    }
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)    
+    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
+
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent, `Liste de nombres
+
+Les nombres : 5 8 13 21  !!
+`)
+
+});
