@@ -1,7 +1,7 @@
 import { ZipReader, Uint8ArrayReader, TextWriter } from '@zip.js/zip.js';
 import {parseXML, Node} from '../../DOMUtils.js'
 
-/** @import {ODTFile} from '../fillOdtTemplate.js' */
+/** @import {ODTFile} from '../templating/fillOdtTemplate.js' */
 
 /**
  * @param {ODTFile} odtFile 
