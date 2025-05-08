@@ -1,6 +1,6 @@
 //@ts-check
 
-export {default as fillOdtTemplate} from './scripts/odf/fillOdtTemplate.js'
+export {default as fillOdtTemplate} from './scripts/odf/templating/fillOdtTemplate.js'
 export {getOdtTextContent} from './scripts/odf/odt/getOdtTextContent.js'
 
 export { createOdsFile } from './scripts/createOdsFile.js'
