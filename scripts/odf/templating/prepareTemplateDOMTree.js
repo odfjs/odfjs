@@ -72,40 +72,6 @@ function getAncestors(node) {
     return ancestors;
 }
 
-// Helper function to find nodes between start and end (inclusive)
-function findNodesBetween(startNode, endNode) {
-    const commonAncestor = findCommonAncestor(startNode, endNode);
-    if(!commonAncestor) return [];
-
-    const result = [];
-    let capturing = false;
-
-    function traverse(node) {
-        if(node === startNode) {
-            capturing = true;
-        }
-
-        if(capturing) {
-            result.push(node);
-        }
-
-        if(node === endNode) {
-            capturing = false;
-            return true;
-        }
-
-        for(let child = node.firstChild; child; child = child.nextSibling) {
-            if(traverse(child)) return true;
-        }
-
-        return false;
-    }
-
-    traverse(commonAncestor);
-
-    return result;
-}
-
 
 /**
  * text position of a node relative to a text nodes within a container
@@ -244,7 +210,13 @@ function consolidateDirectRelationship(startNode, endNode, posInStartNode, posIn
     }
 }
 
-// Helper function to check if one node is ancestor of another
+/**
+ * check if one node is ancestor of another
+ * 
+ * @param {Node} potentialAncestor 
+ * @param {Node} node 
+ * @returns {boolean}
+ */
 function isAncestor(potentialAncestor, node) {
     let current = node.parentNode;
     while(current) {
@@ -254,14 +226,24 @@ function isAncestor(potentialAncestor, node) {
     return false;
 }
 
-// Helper function to replace a node with marker text
+/**
+ * replace a node with marker text
+ * @param {Node} node 
+ * @param {string} markerText 
+ */
 function replaceWithMarker(node, markerText) {
     const document = node.ownerDocument;
     const markerNode = document.createTextNode(markerText);
     node.parentNode.replaceChild(markerNode, node);
 }
 
-// Helper function to remove nodes between two sibling branches
+/**
+ * remove nodes between two sibling branches
+ * 
+ * @param {Node} startBranch 
+ * @param {Node} endBranch 
+ * @param {Node} commonAncestor 
+ */
 function removeNodesBetween(startBranch, endBranch, commonAncestor) {
     let removing = false;
     let nodesToRemove = [];
@@ -287,8 +269,13 @@ function removeNodesBetween(startBranch, endBranch, commonAncestor) {
 }
 
 
-export default function prepareTemplateDOMTree(document){
-        // Prepare tree to be used as template
+
+/**
+ * Consolidate markers which are split among several Text nodes
+ * 
+ * @param {Document} document 
+ */
+function consolidateMarkers(document){
     // Perform a first pass to detect templating markers with formatting to remove it
     const potentialMarkerContainers = [
         ...Array.from(document.getElementsByTagName('text:p')),
@@ -455,16 +442,16 @@ export default function prepareTemplateDOMTree(document){
                 }
             }
         }
-
-
-
     }
+}
 
 
-
-
-
-    // Perform a second pass to split textnodes when they contain several block markers
+/**
+ * isolate markers which are in Text nodes with other texts
+ * 
+ * @param {Document} document 
+ */
+function isolateMarkers(document){
     traverse(document, currentNode => {
         if(currentNode.nodeType === Node.TEXT_NODE) {
             // find all marker starts and ends and split textNode
@@ -540,6 +527,25 @@ export default function prepareTemplateDOMTree(document){
             // skip
         }
     })
+}
 
-    // now, each Node contains at most one block marker
+
+
+/**
+ * This function prepares the template DOM tree in a way that makes it easily processed by the template execution
+ * Specifically, after the call to this function, the document is altered to respect the following property:
+ * 
+ * each template marker ({#each ... as ...}, {/if}, etc.) placed within a single Text node
+ * 
+ * If the template marker was partially formatted in the original document, the formatting is removed so the
+ * marker can be within a single Text node
+ * 
+ * If the template marker was in a Text node with other text, the Text node is split in a way to isolate the marker
+ * from the rest of the text
+ * 
+ * @param {Document} document 
+ */
+export default function prepareTemplateDOMTree(document){
+    consolidateMarkers(document)
+    isolateMarkers(document)
 }
