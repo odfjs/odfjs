@@ -24,7 +24,7 @@ export function serializeToString(node){
 
 
 /**
- * Traverses a DOM tree starting from the given element and applies the visit function
+ * Traverses a DOM tree starting from the given node and applies the visit function
  * to each Element node encountered in tree order (depth-first).
  * 
  * This should probably be replace by the TreeWalker API when implemented by xmldom
