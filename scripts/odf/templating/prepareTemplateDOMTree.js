@@ -35,7 +35,6 @@ function findAllMatches(text, pattern) {
     return results;
 }
 
-
 /**
  * 
  * @param {Node} node1 
@@ -71,7 +70,6 @@ function getAncestors(node) {
 
     return ancestors;
 }
-
 
 /**
  * text position of a node relative to a text nodes within a container
@@ -268,8 +266,6 @@ function removeNodesBetween(startBranch, endBranch, commonAncestor) {
     }
 }
 
-
-
 /**
  * Consolidate markers which are split among several Text nodes
  * 
@@ -277,23 +273,33 @@ function removeNodesBetween(startBranch, endBranch, commonAncestor) {
  */
 function consolidateMarkers(document){
     // Perform a first pass to detect templating markers with formatting to remove it
-    const potentialMarkerContainers = [
+    const potentialMarkersContainers = [
         ...Array.from(document.getElementsByTagName('text:p')),
         ...Array.from(document.getElementsByTagName('text:h'))
     ]
 
-    for(const potentialMarkerContainer of potentialMarkerContainers) {
-        // Check if any template marker is split across multiple text nodes
-        // Get all text nodes within this container
+    for(const potentialMarkersContainer of potentialMarkersContainers) {
+        const consolidatedMarkers = []
+
         /** @type {Text[]} */
-        const containerTextNodesInTreeOrder = [];
+        let containerTextNodesInTreeOrder = [];
+
+        function refreshContainerTextNodes(){
+            containerTextNodesInTreeOrder = []
+
+            traverse(potentialMarkersContainer, node => {
+                if(node.nodeType === Node.TEXT_NODE) {
+                    containerTextNodesInTreeOrder.push(/** @type {Text} */(node))
+                }
+            })
+        }
+
+        refreshContainerTextNodes()
+        
         let fullText = ''
-        traverse(potentialMarkerContainer, node => {
-            if(node.nodeType === Node.TEXT_NODE) {
-                containerTextNodesInTreeOrder.push(/** @type {Text} */(node))
-                fullText = fullText + node.textContent
-            }
-        })
+        for(const node of containerTextNodesInTreeOrder){
+            fullText = fullText + node.textContent
+        }
 
         // Check for each template marker
         const positionedMarkers = [
@@ -307,10 +313,11 @@ function consolidateMarkers(document){
         console.log('positionedMarkers', positionedMarkers)
 
         // If no markers found, skip this container
-        if(positionedMarkers.length >= 1) {
+        while(consolidatedMarkers.length < positionedMarkers.length) {
+            refreshContainerTextNodes()
 
             // For each marker, check if it's contained within a single text node
-            for(const positionedMarker of positionedMarkers) {
+            for(const positionedMarker of positionedMarkers.slice(consolidatedMarkers.length)) {
                 console.log('positionedMarker', positionedMarker)
 
                 let markerStart = -1;
@@ -342,9 +349,16 @@ function consolidateMarkers(document){
                     currentPos = nodeEnd;
                 }
 
+                /*if(!startNode){
+                    throw new Error(`Could not find startNode for marker '${positionedMarker.marker}'`)
+                }*/   
+                    
+                /*if(!endNode){
+                    throw new Error(`Could not find endNode for marker '${positionedMarker.marker}'`)
+                }*/
+
                 // Check if marker spans multiple nodes
                 if(startNode !== endNode) {
-                    console.log('startNode !== endNode')
                     const commonAncestor = findCommonAncestor(startNode, endNode);
 
                     // Calculate relative positions within the nodes
@@ -363,8 +377,6 @@ function consolidateMarkers(document){
 
                     // Find the diverging point in the paths
                     const lowestCommonAncestorChild = findDivergingPoint(pathToStart, pathToEnd);
-
-                    console.log('lowestCommonAncestorChild', lowestCommonAncestorChild)
 
                     if(!lowestCommonAncestorChild) {
                         // Direct parent-child relationship or other simple case
@@ -391,6 +403,8 @@ function consolidateMarkers(document){
 
                             // Create a new node for the start of the marker
                             const startOfMarkerNode = document.createTextNode(positionedMarker.marker);
+
+                            console.log('parentOfStartNode', parentOfStartNode)
 
                             // Insert after the modified start node
                             if(startNode.nextSibling) {
@@ -437,14 +451,17 @@ function consolidateMarkers(document){
                         removeNodesBetween(startBranch, endBranch, commonAncestor);
                     }
 
-                    // After consolidation, we can break as the DOM structure has changed
+                    // After consolidation, break as the DOM structure has changed 
+                    // and containerTextNodesInTreeOrder needs to be refreshed
+                    consolidatedMarkers.push(positionedMarker)
                     break;
                 }
+
+                consolidatedMarkers.push(positionedMarker)
             }
         }
     }
 }
-
 
 /**
  * isolate markers which are in Text nodes with other texts
@@ -528,8 +545,6 @@ function isolateMarkers(document){
         }
     })
 }
-
-
 
 /**
  * This function prepares the template DOM tree in a way that makes it easily processed by the template execution

@@ -1,6 +1,6 @@
 import {ZipReader, ZipWriter, BlobReader, BlobWriter, TextReader, Uint8ArrayReader, TextWriter, Uint8ArrayWriter} from '@zip.js/zip.js';
 
-import {parseXML, serializeToString, Node} from '../../DOMUtils.js'
+import {parseXML, serializeToString} from '../../DOMUtils.js'
 import {makeManifestFile, getManifestFileData} from '../manifest.js';
 import prepareTemplateDOMTree from './prepareTemplateDOMTree.js';
 
@@ -163,9 +163,4 @@ export default async function fillOdtTemplate(odtTemplate, data) {
 
     return writer.close();
 }
-
-
-
-
-
 

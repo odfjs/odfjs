@@ -5,8 +5,8 @@ import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 
 import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
 
-test('template filling {#each ...}{/each} with formating in {#each ...} start marker', async t => {
-    const templatePath = join(import.meta.dirname, '../fixtures/liste-nombres-avec-formattage.odt')
+test('template filling with several layers of formatting in {#each ...} start marker', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/formatting-liste-nombres-plusieurs-couches.odt')
     const templateContent = `Liste de nombres
 
 Les nombres : {#each nombres as n}{n} {/each} !!
@@ -27,6 +27,33 @@ Les nombres : {#each nombres as n}{n} {/each} !!
     t.deepEqual(odtResultTextContent, `Liste de nombres
 
 Les nombres : 1 2 3 5  !!
+`)
+
+});
+
+
+test('template filling - both {#each ...} and {/each} within the same Text node are formatted', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/formatting-liste-nombres-2-markeurs-formatted.odt')
+    const templateContent = `Liste de nombres
+
+Les nombres : {#each nombres as n}{n} {/each} !!
+`
+
+    const data = {
+        nombres : [2,3,5,8]
+    }
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)    
+    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
+
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent, `Liste de nombres
+
+Les nombres : 2 3 5 8  !!
 `)
 
 });
