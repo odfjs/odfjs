@@ -97,173 +97,64 @@ function getNodeTextPosition(node, containerTextNodes) {
 /** @typedef {Node[]} DOMPath  */
 
 /**
- * get the path from ancestor to descendant
+ * remove nodes between startNode and endNode
+ * but keep startNode and endNode
  * 
- * @param {Node} node 
- * @param {Node} ancestor 
- * @returns {DOMPath}
- */
-function getPathToNode(node, ancestor) {
-    /** @type {DOMPath} */
-    const path = [];
-    let current = node;
-
-    while(current && current !== ancestor) {
-        path.unshift(current);
-        current = current.parentNode;
-    }
-
-    return path;
-}
-
-/**
- * find the point where two paths diverge
+ * returns the common ancestor child in start branch 
+ * for the purpose for inserting something between startNode and endNode
+ * with insertionPoint.parentNode.insertBefore(newBetweenContent, insertionPoint)
  * 
- * @param {DOMPath} path1 
- * @param {DOMPath} path2 
- * @returns {Node | undefined}
+ * @param {Node} startNode
+ * @param {Node} endNode
+ * @returns {Node}
  */
-function findDivergingPoint(path1, path2) {
-    for(let i = 0; i < Math.min(path1.length, path2.length); i++) {
-        if(path1[i] !== path2[i]) {
-            return path1[i - 1] || undefined; // Return the last common node
+function removeNodesBetween(startNode, endNode) {
+    let nodesToRemove = new Set();
+
+    // find both ancestry branch
+    const startNodeAncestors = new Set(getAncestors(startNode))
+    const endNodeAncestors = new Set(getAncestors(endNode))
+
+    // find common ancestor
+    const commonAncestor = findCommonAncestor(startNode, endNode)
+
+    // remove everything "on the right" of start branch
+    let currentAncestor = startNode
+    let commonAncestorChildInEndNodeBranch
+
+    while(currentAncestor !== commonAncestor){
+        let siblingToRemove = currentAncestor.nextSibling
+        
+        while(siblingToRemove && !endNodeAncestors.has(siblingToRemove)){
+            nodesToRemove.add(siblingToRemove)
+            siblingToRemove = siblingToRemove.nextSibling
         }
+        if(endNodeAncestors.has(siblingToRemove)){
+            commonAncestorChildInEndNodeBranch = siblingToRemove
+        }
+
+        currentAncestor = currentAncestor.parentNode;
     }
 
-    // One path is a prefix of the other
-    return path1[Math.min(path1.length, path2.length) - 1];
-}
+    // remove everything "on the left" of end branch
+    currentAncestor = endNode
 
-/**
- * handle the case where start and end nodes have a direct relationship
- * @param {Text} startNode 
- * @param {Text} endNode 
- * @param {number} posInStartNode 
- * @param {number} posInEndNode 
- * @param {string} markerText 
- */
-function consolidateDirectRelationship(startNode, endNode, posInStartNode, posInEndNode, markerText) {
-    const startNodeParent = startNode.parentNode;
-    const endNodeParent = endNode.parentNode;
-    const document = startNode.ownerDocument;
-
-    console.log('consolidateDirectRelationship - startNodeParent === endNodeParent', startNodeParent === endNodeParent)
-
-    if(startNodeParent === endNodeParent) {
-        // Siblings case
-        let currentNode = startNode;
-        let nextSibling;
-
-        // Handle start node - split if needed to preserve text before marker
-        if(posInStartNode > 0) {
-            console.log('posInStartNode > 0', posInStartNode)
-            console.log('startNode', startNode.textContent)
-            // Split text node to preserve text before marker
-            const remainingNode = startNode.splitText(posInStartNode);
-            currentNode = remainingNode.previousSibling; // Now we'll work with the second part
-            remainingNode.parentNode?.removeChild(remainingNode)
-            console.log('remainingNode', remainingNode.textContent)
+    while(currentAncestor !== commonAncestor){
+        let siblingToRemove = currentAncestor.previousSibling
+        
+        while(siblingToRemove && !startNodeAncestors.has(siblingToRemove)){
+            nodesToRemove.add(siblingToRemove)
+            siblingToRemove = siblingToRemove.previousSibling
         }
 
-        // Create marker node
-        const markerNode = document.createTextNode(markerText);
-
-        // Insert marker after current node
-        if(currentNode.nextSibling) {
-            startNodeParent.insertBefore(markerNode, currentNode.nextSibling);
-        } else {
-            startNodeParent.appendChild(markerNode);
-        }
-
-        // Remove nodes between start split and end node
-        currentNode = markerNode.nextSibling;
-        while(currentNode && currentNode !== endNode) {
-            nextSibling = currentNode.nextSibling;
-            startNodeParent.removeChild(currentNode);
-            currentNode = nextSibling;
-        }
-
-        // Handle end node - split if needed to preserve text after marker
-        if(posInEndNode < endNode.textContent.length) {
-            // Split to keep text after marker
-            endNode.splitText(posInEndNode);
-            // First part (up to the split point) should be removed
-            startNodeParent.removeChild(endNode);
-        } else {
-            // No text after marker, remove the entire end node
-            startNodeParent.removeChild(endNode);
-        }
-    } else {
-        // Handle nested case (one is ancestor of other)
-        // This is more complex and needs customized handling
-        // Simplified approach: replace everything with marker
-        // A more sophisticated approach would be needed for production
-
-        const isStartAncestorOfEnd = isAncestor(startNode, endNode);
-        if(isStartAncestorOfEnd) {
-            replaceWithMarker(startNode, markerText);
-        } else {
-            replaceWithMarker(endNode, markerText);
-        }
-    }
-}
-
-/**
- * check if one node is ancestor of another
- * 
- * @param {Node} potentialAncestor 
- * @param {Node} node 
- * @returns {boolean}
- */
-function isAncestor(potentialAncestor, node) {
-    let current = node.parentNode;
-    while(current) {
-        if(current === potentialAncestor) return true;
-        current = current.parentNode;
-    }
-    return false;
-}
-
-/**
- * replace a node with marker text
- * @param {Node} node 
- * @param {string} markerText 
- */
-function replaceWithMarker(node, markerText) {
-    const document = node.ownerDocument;
-    const markerNode = document.createTextNode(markerText);
-    node.parentNode.replaceChild(markerNode, node);
-}
-
-/**
- * remove nodes between two sibling branches
- * 
- * @param {Node} startBranch 
- * @param {Node} endBranch 
- * @param {Node} commonAncestor 
- */
-function removeNodesBetween(startBranch, endBranch, commonAncestor) {
-    let removing = false;
-    let nodesToRemove = [];
-
-    for(let child = commonAncestor.firstChild; child; child = child.nextSibling) {
-        if(child === startBranch) {
-            removing = true;
-            continue; // Don't remove the start branch
-        }
-
-        if(removing) {
-            if(child === endBranch) {
-                break; // Stop when we reach end branch
-            }
-            nodesToRemove.push(child);
-        }
+        currentAncestor = currentAncestor.parentNode;
     }
 
-    // Remove all nodes marked for removal
-    for(const nodeToRemove of nodesToRemove) {
-        commonAncestor.removeChild(nodeToRemove);
+    for(const node of nodesToRemove){
+        node.parentNode.removeChild(node)
     }
+
+    return commonAncestorChildInEndNodeBranch
 }
 
 /**
@@ -292,6 +183,8 @@ function consolidateMarkers(document){
                     containerTextNodesInTreeOrder.push(/** @type {Text} */(node))
                 }
             })
+
+            console.log('containerTextNodesInTreeOrder', containerTextNodesInTreeOrder.map(n => n.textContent))
         }
 
         refreshContainerTextNodes()
@@ -310,9 +203,9 @@ function consolidateMarkers(document){
             ...findAllMatches(fullText, eachClosingMarker)
         ];
 
-        console.log('positionedMarkers', positionedMarkers)
+        if(positionedMarkers.length >= 1)
+            console.log('positionedMarkers', positionedMarkers)
 
-        // If no markers found, skip this container
         while(consolidatedMarkers.length < positionedMarkers.length) {
             refreshContainerTextNodes()
 
@@ -320,28 +213,25 @@ function consolidateMarkers(document){
             for(const positionedMarker of positionedMarkers.slice(consolidatedMarkers.length)) {
                 console.log('positionedMarker', positionedMarker)
 
-                let markerStart = -1;
-                let markerEnd = -1;
                 let currentPos = 0;
-                let markerSpansNodes = false;
-                let startNode = null;
-                let endNode = null;
+                let startNode;
+                let endNode;
 
                 // Find which text node(s) contain this marker
                 for(const textNode of containerTextNodesInTreeOrder) {
                     const nodeStart = currentPos;
                     const nodeEnd = nodeStart + textNode.textContent.length;
 
+                    console.log('nodeStart, nodeEnd', nodeStart, nodeEnd)
+
                     // If start of marker is in this node
-                    if(markerStart === -1 && positionedMarker.index >= nodeStart && positionedMarker.index < nodeEnd) {
-                        markerStart = positionedMarker.index;
+                    if(!startNode && positionedMarker.index >= nodeStart && positionedMarker.index < nodeEnd) {
                         startNode = textNode;
                     }
 
                     // If end of marker is in this node
-                    if(markerStart !== -1 && positionedMarker.index + positionedMarker.marker.length > nodeStart &&
+                    if(startNode && positionedMarker.index + positionedMarker.marker.length > nodeStart &&
                         positionedMarker.index + positionedMarker.marker.length <= nodeEnd) {
-                        markerEnd = positionedMarker.index + positionedMarker.marker.length;
                         endNode = textNode;
                         break;
                     }
@@ -349,13 +239,15 @@ function consolidateMarkers(document){
                     currentPos = nodeEnd;
                 }
 
-                /*if(!startNode){
+                console.log('startNode, endNode', startNode?.textContent, endNode?.textContent)
+
+                if(!startNode){
                     throw new Error(`Could not find startNode for marker '${positionedMarker.marker}'`)
-                }*/   
+                }   
                     
-                /*if(!endNode){
+                if(!endNode){
                     throw new Error(`Could not find endNode for marker '${positionedMarker.marker}'`)
-                }*/
+                }
 
                 // Check if marker spans multiple nodes
                 if(startNode !== endNode) {
@@ -371,85 +263,47 @@ function consolidateMarkers(document){
                     // Calculate the position within the end node
                     let posInEndNode = (positionedMarker.index + positionedMarker.marker.length) - getNodeTextPosition(endNode, containerTextNodesInTreeOrder);
 
-                    // Get the path from common ancestor to start and end nodes
-                    const pathToStart = getPathToNode(startNode, commonAncestor);
-                    const pathToEnd = getPathToNode(endNode, commonAncestor);
+                    /** @type {Node} */
+                    let beforeStartNode = startNode
 
-                    // Find the diverging point in the paths
-                    const lowestCommonAncestorChild = findDivergingPoint(pathToStart, pathToEnd);
+                    // if there is before-text, split
+                    if(posInStartNode > 0) {
+                        // Text exists before the marker - preserve it
 
-                    if(!lowestCommonAncestorChild) {
-                        // Direct parent-child relationship or other simple case
-                        // Handle separately
-                        consolidateDirectRelationship(startNode, endNode, posInStartNode, posInEndNode, positionedMarker.marker);
-                    } else {
-                        // Complex case: we need to:
-                        // 1. Preserve text before marker in startNode
-                        // 2. Preserve text after marker in endNode
-                        // 3. Replace everything in-between with marker text
+                        // set newStartNode to a Text node containing only the marker beginning
+                        const newStartNode = startNode.splitText(posInStartNode)
+                        // startNode/beforeStartNode now contains only non-marker text
 
-                        // Get all nodes between the diverging branches (including the branches)
-                        const startBranch = pathToStart[pathToStart.indexOf(lowestCommonAncestorChild)];
-                        const endBranch = pathToEnd[pathToEnd.indexOf(lowestCommonAncestorChild)];
+                        // then, by definition of .splitText(posInStartNode):
+                        posInStartNode = 0
 
-                        // First, handle the start node - split if necessary
-                        if(posInStartNode > 0) {
-                            // Text exists before the marker - preserve it
-                            const textBeforeMarker = startNodeTextContent.substring(0, posInStartNode);
-                            const parentOfStartNode = startNode.parentNode;
-
-                            // Replace the start node with the text before marker
-                            startNode.textContent = textBeforeMarker;
-
-                            // Create a new node for the start of the marker
-                            const startOfMarkerNode = document.createTextNode(positionedMarker.marker);
-
-                            console.log('parentOfStartNode', parentOfStartNode)
-
-                            // Insert after the modified start node
-                            if(startNode.nextSibling) {
-                                parentOfStartNode.insertBefore(startOfMarkerNode, startNode.nextSibling);
-                            } else {
-                                parentOfStartNode.appendChild(startOfMarkerNode);
-                            }
-                        } else {
-                            // No text before marker, just replace the content
-                            startNode.textContent = positionedMarker.marker;
-                        }
-
-                        // Handle the end node - split if necessary
-                        if(posInEndNode < endNodeTextContent.length) {
-                            // Text exists after the marker - preserve it
-                            const textAfterMarker = endNodeTextContent.substring(posInEndNode);
-                            const parentOfEndNode = endNode.parentNode;
-
-                            // Replace the end node with just the text after marker
-                            endNode.textContent = textAfterMarker;
-
-                            // Create a new node for the end of the marker if needed
-                            // Only needed if we haven't already added the full marker to the start node
-                            if(posInStartNode > 0) {
-                                const endOfMarkerNode = document.createTextNode("");  // Empty as marker is in start node
-
-                                // Insert before the modified end node
-                                parentOfEndNode.insertBefore(endOfMarkerNode, endNode);
-                            }
-                        } else {
-                            // No text after marker
-                            if(posInStartNode > 0) {
-                                // If we preserved text before the marker, remove the end node
-                                // as the marker is now fully in the start branch
-                                endNode.parentNode.removeChild(endNode);
-                            } else {
-                                // Otherwise just replace the content
-                                endNode.textContent = "";
-                            }
-                        }
-
-                        // Now remove all nodes between start branch and end branch
-                        // but not the branches themselves
-                        removeNodesBetween(startBranch, endBranch, commonAncestor);
+                        // remove the marker beginning part from the tree (since the marker will be inserted in full later)
+                        newStartNode.parentNode?.removeChild(newStartNode)
                     }
+
+                    /** @type {Node} */
+                    let afterEndNode
+
+                    // if there is after-text, split
+                    if(posInEndNode < endNodeTextContent.length) {
+                        // Text exists after the marker - preserve it
+
+                        // set afterEndNode to a Text node containing only non-marker text
+                        afterEndNode = endNode.splitText(posInEndNode);
+                        // endNode now contains only the end of marker text
+
+                        // then, by definition of .splitText(posInEndNode):
+                        posInEndNode = endNodeTextContent.length
+
+                        // remove the marker ending part from the tree (since the marker will be inserted in full later)
+                        endNode.parentNode?.removeChild(endNode)
+                    }
+
+                    // then, replace all nodes between (new)startNode and (new)endNode with a single textNode in commonAncestor
+                    const insertionPoint = removeNodesBetween(beforeStartNode, afterEndNode)
+                    const markerTextNode = insertionPoint.ownerDocument.createTextNode(positionedMarker.marker)
+
+                    insertionPoint.parentNode.insertBefore(markerTextNode, insertionPoint)
 
                     // After consolidation, break as the DOM structure has changed 
                     // and containerTextNodesInTreeOrder needs to be refreshed
