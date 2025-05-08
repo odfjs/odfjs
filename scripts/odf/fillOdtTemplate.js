@@ -299,7 +299,7 @@ const elseMarker = '{:else}'
 const closingIfMarker = '{/if}'
 
 const eachStartMarkerRegex = /{#each\s+([^}]+?)\s+as\s+([^}]+?)\s*}/;
-const eachClosingBlockMarker = '{/each}'
+const eachClosingMarker = '{/each}'
 
 
 
@@ -366,7 +366,7 @@ function fillTemplatedOdtElement(rootElement, compartment) {
             /**
              * Looking for {/each}
              */
-            const isEachClosingBlock = text.includes(eachClosingBlockMarker)
+            const isEachClosingBlock = text.includes(eachClosingMarker)
 
             if(isEachClosingBlock) {
 
@@ -836,8 +836,10 @@ function fillTemplatedOdtDocument(document, compartment) {
             ...findAllMatches(fullText, elseMarker),
             ...findAllMatches(fullText, closingIfMarker),
             ...findAllMatches(fullText, eachStartMarkerRegex),
-            ...findAllMatches(fullText, eachClosingBlockMarker)
+            ...findAllMatches(fullText, eachClosingMarker)
         ];
+
+        console.log('positionedMarkers', positionedMarkers)
 
         // If no markers found, skip this container
         if(positionedMarkers.length >= 1) {
@@ -995,7 +997,7 @@ function fillTemplatedOdtDocument(document, compartment) {
                 let matchIndex;
 
                 // looking for a block marker
-                for(const marker of [ifStartMarkerRegex, elseMarker, closingIfMarker, eachStartMarkerRegex, eachClosingBlockMarker]) {
+                for(const marker of [ifStartMarkerRegex, elseMarker, closingIfMarker, eachStartMarkerRegex, eachClosingMarker]) {
                     if(typeof marker === 'string') {
                         const index = remainingText.indexOf(marker)
 
