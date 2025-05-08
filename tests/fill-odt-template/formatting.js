@@ -5,6 +5,7 @@ import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 
 import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
 
+
 test('template filling with several layers of formatting in {#each ...} start marker', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/formatting-liste-nombres-plusieurs-couches.odt')
     const templateContent = `Liste de nombres
@@ -86,7 +87,6 @@ Les nombres : 3 5 8 13  !!
 });
 
 
-
 test('template filling - {/each} and text after partially formatted', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/formatting-liste-nombres-each-end-and-after-formatted.odt')
     const templateContent = `Liste de nombres
@@ -114,8 +114,6 @@ Les nombres : 5 8 13 21  !!
 });
 
 
-
-
 test('template filling - partially formatted variable', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/partially-formatted-variable.odt')
     const templateContent = `Nombre
@@ -129,9 +127,9 @@ Voici le nombre : {nombre} !!!
 
     const templateTextContent = await getOdtTextContent(odtTemplate)    
     t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
-
+//try{
     const odtResult = await fillOdtTemplate(odtTemplate, data)
-
+//}catch(e){console.error(e)}
     const odtResultTextContent = await getOdtTextContent(odtResult)
     t.deepEqual(odtResultTextContent, `Nombre
 
@@ -139,3 +137,31 @@ Voici le nombre : 37 !!!
 `)
 
 });
+
+
+test('template filling - formatted-start-each-single-paragraph', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/formatted-start-each-single-paragraph.odt')
+    const templateContent = `
+{#each nombres as n}
+{n}
+{/each}
+`
+
+    const data = {nombres : [37, 38, 39]}
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)    
+    t.deepEqual(templateTextContent.trim(), templateContent.trim(), 'reconnaissance du template')
+    
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent.trim(), `
+37
+38
+39
+`.trim())
+
+});
+
