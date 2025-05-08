@@ -1,5 +1,5 @@
 import {traverse, Node} from '../../DOMUtils.js'
-import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex} from './markers.js'
+import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
 
 /**
  * @typedef TextPlaceToFill
@@ -14,7 +14,8 @@ import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, if
  * @returns {TextPlaceToFill | undefined}
  */
 function findPlacesToFillInString(str, compartment) {
-    const matches = str.matchAll(/\{([^{#\/]+?)\}/g)
+    const varRexExp = new RegExp(variableRegex.source, 'g');
+    const matches = str.matchAll(varRexExp)
 
     /** @type {TextPlaceToFill['expressions']} */
     const expressions = []

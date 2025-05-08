@@ -1,5 +1,5 @@
 import {traverse, Node} from "../../DOMUtils.js";
-import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex} from './markers.js'
+import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
 
 /**
  * 
@@ -183,8 +183,6 @@ function consolidateMarkers(document){
                     containerTextNodesInTreeOrder.push(/** @type {Text} */(node))
                 }
             })
-
-            console.log('containerTextNodesInTreeOrder', containerTextNodesInTreeOrder.map(n => n.textContent))
         }
 
         refreshContainerTextNodes()
@@ -200,18 +198,19 @@ function consolidateMarkers(document){
             ...findAllMatches(fullText, elseMarker),
             ...findAllMatches(fullText, closingIfMarker),
             ...findAllMatches(fullText, eachStartMarkerRegex),
-            ...findAllMatches(fullText, eachClosingMarker)
+            ...findAllMatches(fullText, eachClosingMarker),
+            ...findAllMatches(fullText, variableRegex)
         ];
 
-        if(positionedMarkers.length >= 1)
-            console.log('positionedMarkers', positionedMarkers)
+        /*if(positionedMarkers.length >= 1)
+            console.log('positionedMarkers', positionedMarkers)*/
 
         while(consolidatedMarkers.length < positionedMarkers.length) {
             refreshContainerTextNodes()
 
             // For each marker, check if it's contained within a single text node
             for(const positionedMarker of positionedMarkers.slice(consolidatedMarkers.length)) {
-                console.log('positionedMarker', positionedMarker)
+                //console.log('positionedMarker', positionedMarker)
 
                 let currentPos = 0;
                 let startNode;
@@ -221,8 +220,6 @@ function consolidateMarkers(document){
                 for(const textNode of containerTextNodesInTreeOrder) {
                     const nodeStart = currentPos;
                     const nodeEnd = nodeStart + textNode.textContent.length;
-
-                    console.log('nodeStart, nodeEnd', nodeStart, nodeEnd)
 
                     // If start of marker is in this node
                     if(!startNode && positionedMarker.index >= nodeStart && positionedMarker.index < nodeEnd) {
@@ -239,8 +236,6 @@ function consolidateMarkers(document){
                     currentPos = nodeEnd;
                 }
 
-                console.log('startNode, endNode', startNode?.textContent, endNode?.textContent)
-
                 if(!startNode){
                     throw new Error(`Could not find startNode for marker '${positionedMarker.marker}'`)
                 }   
@@ -251,8 +246,6 @@ function consolidateMarkers(document){
 
                 // Check if marker spans multiple nodes
                 if(startNode !== endNode) {
-                    const commonAncestor = findCommonAncestor(startNode, endNode);
-
                     // Calculate relative positions within the nodes
                     let startNodeTextContent = startNode.textContent || '';
                     let endNodeTextContent = endNode.textContent || '';
