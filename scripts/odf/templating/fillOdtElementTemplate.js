@@ -260,7 +260,8 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         iterable = []
     }
 
-    
+    let firstItemFirstChild
+    let lastItemLastChild
 
     // create each loop result
     // using a for-of loop to accept all iterable values
@@ -284,10 +285,61 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
             insideCompartment
         )
 
+        if(!firstItemFirstChild){
+            firstItemFirstChild = itemFragment.firstChild
+        }
+
+        // eventually, will be set to the last item's last child
+        lastItemLastChild = itemFragment.lastChild
+
         console.log('{#each} fragment', itemFragment.textContent)
 
         endChild.parentNode.insertBefore(itemFragment, endChild)
     }
+
+    // add before-text if any
+    const startNodePreviousSiblings = []
+    let startNodePreviousSibling = startNode.previousSibling
+    while(startNodePreviousSibling){
+        startNodePreviousSiblings.push(startNodePreviousSibling)
+        startNodePreviousSibling = startNodePreviousSibling.previousSibling
+    }
+
+    // set the array back to tree order
+    startNodePreviousSiblings.reverse()
+
+    if(startNodePreviousSiblings.length >= 1){
+        let firstItemFirstestDescendant = firstItemFirstChild
+        while(firstItemFirstestDescendant?.firstChild){
+            firstItemFirstestDescendant = firstItemFirstestDescendant.firstChild
+        }
+
+        for(const beforeFirstNodeElement of startNodePreviousSiblings){
+            firstItemFirstestDescendant?.parentNode?.insertBefore(beforeFirstNodeElement, firstItemFirstestDescendant)
+        }
+    }
+
+
+
+    // add after-text if any
+    const endNodeNextSiblings = []
+    let endNodeNextSibling = endNode.nextSibling
+    while(endNodeNextSibling){
+        endNodeNextSiblings.push(endNodeNextSibling)
+        endNodeNextSibling = endNodeNextSibling.nextSibling
+    }
+
+    if(endNodeNextSiblings.length >= 1){
+        let lastItemLatestDescendant = lastItemLastChild
+        while(lastItemLatestDescendant?.lastChild){
+            lastItemLatestDescendant = lastItemLatestDescendant.lastChild
+        }
+
+        for(const afterEndNodeElement of endNodeNextSiblings){
+            lastItemLatestDescendant?.parentNode?.appendChild(afterEndNodeElement)
+        }
+    }
+
 
     console.log('doc text after each', doc.textContent)
 

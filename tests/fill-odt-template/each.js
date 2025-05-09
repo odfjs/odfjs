@@ -277,13 +277,13 @@ test('template filling with text after {/each} in same text node', async t => {
 
 Asperge, 
 Betterave, 
-Blette, en Printemps
+Blette,  en Printemps
 `)
 
 });
 
 
-test.skip('template filling of a table', async t => {
+test('template filling of a table', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/tableau-simple.odt')
     const templateContent = `Évolution énergie en kWh par personne en France
 
