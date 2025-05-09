@@ -239,8 +239,6 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
 function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment) {
     //console.log('fillEachBlock', iterableExpression, itemExpression)
 
-    const doc = startNode.ownerDocument.documentElement
-
     const {startChild, endChild, content: repeatedFragment} = extractBlockContent(startNode, endNode)
 
     // Find the iterable in the data
