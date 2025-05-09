@@ -1,3 +1,5 @@
+//@ts-check
+
 import {traverse, Node} from "../../DOMUtils.js";
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
 
@@ -39,7 +41,7 @@ function findAllMatches(text, pattern) {
  * 
  * @param {Node} node1 
  * @param {Node} node2 
- * @returns {Node | undefined}
+ * @returns {Node}
  */
 function findCommonAncestor(node1, node2) {
     const ancestors1 = getAncestors(node1);
@@ -51,7 +53,7 @@ function findCommonAncestor(node1, node2) {
         }
     }
 
-    return undefined;
+    throw new Error(`node1 and node2 do not have a common ancestor`)
 }
 
 /**
@@ -281,6 +283,8 @@ function consolidateMarkers(document){
                         newStartNode.parentNode?.removeChild(newStartNode)
 
                         commonAncestor.insertBefore(newStartNode, commonAncestorStartChild.nextSibling)
+
+                        //console.log('commonAncestor after before-text split', commonAncestor.textContent )
                     }
 
 
@@ -299,10 +303,14 @@ function consolidateMarkers(document){
                             endNode.parentNode?.removeChild(endNode)
                             commonAncestor.insertBefore(endNode, commonAncestorEndChild)
                         }
+
+                        //console.log('commonAncestor after after-text split', commonAncestor.textContent )
                     }
 
                     // then, replace all nodes between (new)startNode and (new)endNode with a single textNode in commonAncestor
                     replaceBetweenNodesWithText(newStartNode, endNode, positionedMarker.marker)
+
+                    //console.log('commonAncestor after replaceBetweenNodesWithText', commonAncestor.textContent )
 
                     // After consolidation, break as the DOM structure has changed 
                     // and containerTextNodesInTreeOrder needs to be refreshed
@@ -317,12 +325,28 @@ function consolidateMarkers(document){
 }
 
 /**
+ * @typedef {typeof closingIfMarker | typeof eachClosingMarker | typeof eachStartMarkerRegex.source | typeof elseMarker | typeof ifStartMarkerRegex.source | typeof variableRegex.source} MarkerType
+ */
+
+/**
+ * @typedef {Object} MarkerNode
+ * @prop {Node} node
+ * @prop {MarkerType} markerType
+ */
+
+/**
  * isolate markers which are in Text nodes with other texts
  * 
  * @param {Document} document 
+ * @returns {Map<Node, MarkerType>}
  */
-function isolateMarkers(document){
+function isolateMarkerText(document){
+    /** @type {ReturnType<isolateMarkerText>} */
+    const markerNodes = new Map()
+
     traverse(document, currentNode => {
+        //console.log('isolateMarkers', currentNode.nodeName, currentNode.textContent)
+
         if(currentNode.nodeType === Node.TEXT_NODE) {
             // find all marker starts and ends and split textNode
             let remainingText = currentNode.textContent || ''
@@ -330,6 +354,8 @@ function isolateMarkers(document){
             while(remainingText.length >= 1) {
                 let matchText;
                 let matchIndex;
+                /** @type {MarkerType} */
+                let markerType;
 
                 // looking for a block marker
                 for(const marker of [ifStartMarkerRegex, elseMarker, closingIfMarker, eachStartMarkerRegex, eachClosingMarker]) {
@@ -339,6 +365,7 @@ function isolateMarkers(document){
                         if(index !== -1) {
                             matchText = marker
                             matchIndex = index
+                            markerType = marker
 
                             // found the first match
                             break; // get out of loop
@@ -351,6 +378,7 @@ function isolateMarkers(document){
                         if(match) {
                             matchText = match[0]
                             matchIndex = match.index
+                            markerType = marker.source
 
                             // found the first match
                             break; // get out of loop
@@ -373,11 +401,21 @@ function isolateMarkers(document){
 
                         // per spec, currentNode now contains before-match and match text
 
+                        /** @type {Node} */
+                        let matchTextNode
+
                         // @ts-ignore
                         if(matchIndex > 0) {
                             // @ts-ignore
-                            currentNode.splitText(matchIndex)
+                            matchTextNode = currentNode.splitText(matchIndex)
                         }
+                        else{
+                            matchTextNode = currentNode
+                        }
+
+                        markerNodes.set(matchTextNode, markerType)
+
+                        // per spec, currentNode now contains only before-match text
 
                         if(afterMatchTextNode) {
                             currentNode = afterMatchTextNode
@@ -397,7 +435,99 @@ function isolateMarkers(document){
             // skip
         }
     })
+
+    return markerNodes
 }
+
+
+
+/**
+ * after isolateMatchingMarkersStructure, matching markers (opening/closing each, if/then/closing if)
+ * are put in isolated branches within their common ancestors
+ * 
+ * UNFINISHED - maybe another day if relevant
+ * 
+ * @param {Document} document 
+ * @param {Map<Node, MarkerType>} markerNodes 
+ */
+//function isolateMatchingMarkersStructure(document, markerNodes){
+    /** @type {MarkerNode[]} */
+/*    let currentlyOpenBlocks = []
+
+    traverse(document, currentNode => {
+
+        const markerType = markerNodes.get(currentNode)
+
+        if(markerType){
+            switch(markerType){
+                case eachStartMarkerRegex.source:
+                case ifStartMarkerRegex.source: {
+                    currentlyOpenBlocks.push({
+                        node: currentNode,
+                        markerType
+                    })
+                    break;
+                }
+                case eachClosingMarker: {
+                    const lastOpenedBlockMarkerNode = currentlyOpenBlocks.pop()
+
+                    if(!lastOpenedBlockMarkerNode)
+                        throw new Error(`{/each} found without corresponding opening {#each x as y}`)
+    
+                    if(lastOpenedBlockMarkerNode.markerType !== eachStartMarkerRegex.source)
+                        throw new Error(`{/each} found while the last opened block was not an opening {#each x as y} (it was a ${lastOpenedBlockMarkerNode.markerType})`)
+    
+                    const openingEachNode = lastOpenedBlockMarkerNode.node
+                    const closingEachNode = currentNode
+
+                    const commonAncestor = findCommonAncestor(openingEachNode, closingEachNode)
+
+                    if(openingEachNode.parentNode !== commonAncestor && openingEachNode.parentNode.childNodes.length >= 2){
+                        if(openingEachNode.previousSibling){
+                            // create branch for previousSiblings
+                            let previousSibling = openingEachNode.previousSibling
+                            const previousSiblings = []
+                            while(previousSibling){
+                                previousSiblings.push(previousSibling.previousSibling)
+                                previousSibling = previousSibling.previousSibling
+                            }
+
+                            // put previous siblings in tree order
+                            previousSiblings.reverse()
+
+                            const parent = openingEachNode.parentNode
+                            const parentClone = parent.cloneNode(false)
+                            for(const previousSibling of previousSiblings){
+                                previousSibling.parentNode.removeChild(previousSibling)
+                                parentClone.appendChild(previousSibling)
+                            }
+
+                            let openingEachNodeBranch = openingEachNode.parentNode
+                            let branchForPreviousSiblings = parentClone
+
+                            while(openingEachNodeBranch.parentNode !== commonAncestor){
+                                const newParentClone = openingEachNodeBranch.parentNode.cloneNode(false)
+                                branchForPreviousSiblings.parentNode.removeChild(branchForPreviousSiblings)
+                                newParentClone.appendChild(branchForPreviousSiblings)
+                            }
+                        }
+                    }
+
+
+
+
+                    break;
+                }
+
+                default:
+                    throw new TypeError(`MarkerType not recognized: '${markerType}`)
+            }
+        }
+
+    })
+
+}*/
+
 
 /**
  * This function prepares the template DOM tree in a way that makes it easily processed by the template execution
@@ -415,5 +545,11 @@ function isolateMarkers(document){
  */
 export default function prepareTemplateDOMTree(document){
     consolidateMarkers(document)
-    isolateMarkers(document)
+    // after consolidateMarkers, each marker is in at most one text node
+    // (formatting with markers is removed)
+
+    isolateMarkerText(document)
+    // after isolateMarkerText, each marker is in exactly one text node
+    // (markers are separated from text that was before or after in the same text node)
+
 }

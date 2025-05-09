@@ -247,6 +247,42 @@ Hiver
 });
 
 
+test('template filling with text after {/each} in same text node', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/text-after-closing-each.odt')
+    const templateContent = `Légumes de saison
+
+{#each légumes as légume}
+{légume}, 
+{/each} en {saison}
+`
+
+	const data = {
+        saison: 'Printemps',
+        légumes: [
+            'Asperge',
+            'Betterave',
+            'Blette'
+        ]
+    }
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)    
+    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
+
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent, `Légumes de saison
+
+Asperge, 
+Betterave, 
+Blette,  en Printemps
+`)
+
+});
+
+
 test('template filling of a table', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/tableau-simple.odt')
     const templateContent = `Évolution énergie en kWh par personne en France

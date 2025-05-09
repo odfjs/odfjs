@@ -85,6 +85,8 @@ function findPlacesToFillInString(str, compartment) {
  * @returns {{startChild: Node, endChild:Node, content: DocumentFragment}}
  */
 function extractBlockContent(blockStartNode, blockEndNode) {
+    //console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
+
     // find common ancestor of blockStartNode and blockEndNode
     let commonAncestor
 
@@ -118,7 +120,10 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     const startChild = startAncestryToCommonAncestor.at(-1)
     const endChild = endAncestryToCommonAncestor.at(-1)
 
+    //console.log('[extractBlockContent] endChild', endChild.textContent)
+
     // Extract DOM content in a documentFragment
+    /** @type {DocumentFragment} */
     const contentFragment = blockStartNode.ownerDocument.createDocumentFragment()
 
     /** @type {Element[]} */
@@ -134,6 +139,8 @@ function extractBlockContent(blockStartNode, blockEndNode) {
         sibling.parentNode?.removeChild(sibling)
         contentFragment.appendChild(sibling)
     }
+
+    //console.log('extractBlockContent contentFragment', contentFragment.textContent)
 
     return {
         startChild,
@@ -231,8 +238,6 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
  */
 function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment) {
     //console.log('fillEachBlock', iterableExpression, itemExpression)
-    //console.log('startNode', startNode.nodeType, startNode.nodeName)
-    //console.log('endNode', endNode.nodeType, endNode.nodeName)
 
     const {startChild, endChild, content: repeatedFragment} = extractBlockContent(startNode, endNode)
 
@@ -244,9 +249,13 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         iterable = []
     }
 
+    let firstItemFirstChild
+    let lastItemLastChild
+
     // create each loop result
     // using a for-of loop to accept all iterable values
     for(const item of iterable) {
+
         /** @type {DocumentFragment} */
         // @ts-ignore
         const itemFragment = repeatedFragment.cloneNode(true)
@@ -262,17 +271,67 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
             insideCompartment
         )
 
+        if(!firstItemFirstChild){
+            firstItemFirstChild = itemFragment.firstChild
+        }
+
+        // eventually, will be set to the last item's last child
+        lastItemLastChild = itemFragment.lastChild
+
         endChild.parentNode.insertBefore(itemFragment, endChild)
     }
+
+    // add before-text if any
+    const startNodePreviousSiblings = []
+    let startNodePreviousSibling = startNode.previousSibling
+    while(startNodePreviousSibling){
+        startNodePreviousSiblings.push(startNodePreviousSibling)
+        startNodePreviousSibling = startNodePreviousSibling.previousSibling
+    }
+
+    // set the array back to tree order
+    startNodePreviousSiblings.reverse()
+
+    if(startNodePreviousSiblings.length >= 1){
+        let firstItemFirstestDescendant = firstItemFirstChild
+        while(firstItemFirstestDescendant?.firstChild){
+            firstItemFirstestDescendant = firstItemFirstestDescendant.firstChild
+        }
+
+        for(const beforeFirstNodeElement of startNodePreviousSiblings){
+            firstItemFirstestDescendant?.parentNode?.insertBefore(beforeFirstNodeElement, firstItemFirstestDescendant)
+        }
+    }
+
+    // add after-text if any
+    const endNodeNextSiblings = []
+    let endNodeNextSibling = endNode.nextSibling
+    while(endNodeNextSibling){
+        endNodeNextSiblings.push(endNodeNextSibling)
+        endNodeNextSibling = endNodeNextSibling.nextSibling
+    }
+
+    if(endNodeNextSiblings.length >= 1){
+        let lastItemLatestDescendant = lastItemLastChild
+        while(lastItemLatestDescendant?.lastChild){
+            lastItemLatestDescendant = lastItemLatestDescendant.lastChild
+        }
+
+        for(const afterEndNodeElement of endNodeNextSiblings){
+            lastItemLatestDescendant?.parentNode?.appendChild(afterEndNodeElement)
+        }
+    }
+
 
     // remove block marker elements
     startChild.parentNode.removeChild(startChild)
     endChild.parentNode.removeChild(endChild)
+
 }
 
 
-const IF = 'IF'
-const EACH = 'EACH'
+const IF = ifStartMarkerRegex.source
+const EACH = eachStartMarkerRegex.source
 
 /**
  * 
