@@ -1,3 +1,5 @@
+//@ts-check
+
 import {traverse, Node} from "../../DOMUtils.js";
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
 
@@ -39,7 +41,7 @@ function findAllMatches(text, pattern) {
  * 
  * @param {Node} node1 
  * @param {Node} node2 
- * @returns {Node | undefined}
+ * @returns {Node}
  */
 function findCommonAncestor(node1, node2) {
     const ancestors1 = getAncestors(node1);
@@ -51,7 +53,7 @@ function findCommonAncestor(node1, node2) {
         }
     }
 
-    return undefined;
+    throw new Error(`node1 and node2 do not have a common ancestor`)
 }
 
 /**
@@ -281,6 +283,8 @@ function consolidateMarkers(document){
                         newStartNode.parentNode?.removeChild(newStartNode)
 
                         commonAncestor.insertBefore(newStartNode, commonAncestorStartChild.nextSibling)
+
+                        //console.log('commonAncestor after before-text split', commonAncestor.textContent )
                     }
 
 
@@ -299,10 +303,14 @@ function consolidateMarkers(document){
                             endNode.parentNode?.removeChild(endNode)
                             commonAncestor.insertBefore(endNode, commonAncestorEndChild)
                         }
+
+                        //console.log('commonAncestor after after-text split', commonAncestor.textContent )
                     }
 
                     // then, replace all nodes between (new)startNode and (new)endNode with a single textNode in commonAncestor
                     replaceBetweenNodesWithText(newStartNode, endNode, positionedMarker.marker)
+
+                    //console.log('commonAncestor after replaceBetweenNodesWithText', commonAncestor.textContent )
 
                     // After consolidation, break as the DOM structure has changed 
                     // and containerTextNodesInTreeOrder needs to be refreshed
@@ -323,6 +331,8 @@ function consolidateMarkers(document){
  */
 function isolateMarkers(document){
     traverse(document, currentNode => {
+        //console.log('isolateMarkers', currentNode.nodeName, currentNode.textContent)
+
         if(currentNode.nodeType === Node.TEXT_NODE) {
             // find all marker starts and ends and split textNode
             let remainingText = currentNode.textContent || ''
