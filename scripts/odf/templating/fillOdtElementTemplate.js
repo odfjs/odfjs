@@ -303,8 +303,6 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         }
     }
 
-
-
     // add after-text if any
     const endNodeNextSiblings = []
     let endNodeNextSibling = endNode.nextSibling
