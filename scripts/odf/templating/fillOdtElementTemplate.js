@@ -1,6 +1,5 @@
 import {traverse, Node} from '../../DOMUtils.js'
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
-import prepareTemplateDOMTree from './prepareTemplateDOMTree.js';
 
 /**
  * @typedef TextPlaceToFill
@@ -86,7 +85,7 @@ function findPlacesToFillInString(str, compartment) {
  * @returns {{startChild: Node, endChild:Node, content: DocumentFragment}}
  */
 function extractBlockContent(blockStartNode, blockEndNode) {
-    console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
+    //console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
 
     // find common ancestor of blockStartNode and blockEndNode
     let commonAncestor
@@ -121,7 +120,7 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     const startChild = startAncestryToCommonAncestor.at(-1)
     const endChild = endAncestryToCommonAncestor.at(-1)
 
-    console.log('[extractBlockContent] endChild', endChild.textContent)
+    //console.log('[extractBlockContent] endChild', endChild.textContent)
 
     // Extract DOM content in a documentFragment
     /** @type {DocumentFragment} */
@@ -141,7 +140,7 @@ function extractBlockContent(blockStartNode, blockEndNode) {
         contentFragment.appendChild(sibling)
     }
 
-    console.log('extractBlockContent contentFragment', contentFragment.textContent)
+    //console.log('extractBlockContent contentFragment', contentFragment.textContent)
 
     return {
         startChild,
@@ -239,18 +238,10 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
  */
 function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment) {
     //console.log('fillEachBlock', iterableExpression, itemExpression)
-    console.log('startNode', startNode.nodeName, startNode.textContent)
-    console.log('endNode', endNode.nodeName, endNode.textContent)
-    console.log('endNode parent', endNode.parentNode.childNodes.length, endNode.parentNode.textContent)
 
     const doc = startNode.ownerDocument.documentElement
 
-    console.log('doc text', doc.textContent)
-
     const {startChild, endChild, content: repeatedFragment} = extractBlockContent(startNode, endNode)
-
-    console.log('endChild after extractBlockContent', endChild.textContent)
-    console.log('doc text', doc.textContent)
 
     // Find the iterable in the data
     // PPP eventually, evaluate the expression as a JS expression
@@ -266,13 +257,10 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
     // create each loop result
     // using a for-of loop to accept all iterable values
     for(const item of iterable) {
-        console.log('{#each}', itemExpression, item)
-        console.log('doc text', doc.textContent)
 
         /** @type {DocumentFragment} */
         // @ts-ignore
         const itemFragment = repeatedFragment.cloneNode(true)
-        console.log('itemFragment', itemFragment.textContent)
 
         let insideCompartment = new Compartment({
             globals: Object.assign({}, compartment.globalThis, {[itemExpression]: item}),
@@ -291,8 +279,6 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 
         // eventually, will be set to the last item's last child
         lastItemLastChild = itemFragment.lastChild
-
-        console.log('{#each} fragment', itemFragment.textContent)
 
         endChild.parentNode.insertBefore(itemFragment, endChild)
     }
@@ -341,19 +327,15 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
     }
 
 
-    console.log('doc text after each', doc.textContent)
-
     // remove block marker elements
     startChild.parentNode.removeChild(startChild)
     endChild.parentNode.removeChild(endChild)
 
-    console.log('doc text after removes', doc.textContent)
-
 }
 
 
-const IF = 'IF'
-const EACH = 'EACH'
+const IF = ifStartMarkerRegex.source
+const EACH = eachStartMarkerRegex.source
 
 /**
  * 
@@ -433,13 +415,9 @@ export default function fillOdtElementTemplate(rootElement, compartment) {
                 if(currentlyOpenBlocks.length === 1) {
                     eachClosingMarkerNode = currentNode
 
-                    console.log('before fillEachBlock', eachClosingMarkerNode.parentNode.textContent)
-
                     // found an {#each} and its corresponding {/each}
                     // execute replacement loop
                     fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment)
-
-                    console.log('after fillEachBlock', rootElement.documentElement.textContent)
 
                     eachOpeningMarkerNode = undefined
                     eachBlockIterableExpression = undefined
