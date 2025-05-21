@@ -166,9 +166,10 @@ function consolidateMarkers(document){
         ...Array.from(document.getElementsByTagName('text:h'))
     ]
 
-    const consolidatedMarkers = []
-
     for(const potentialMarkersContainer of potentialMarkersContainers) {
+        /** @type {{marker: string, index: number}[]} */
+        const consolidatedMarkers = []
+
         /** @type {Text[]} */
         let containerTextNodesInTreeOrder = [];
 
@@ -245,13 +246,16 @@ function consolidateMarkers(document){
 
                 // Check if marker spans multiple nodes
                 if(startNode !== endNode) {
+                    //console.log('startNode !== endNode', startNode.textContent, endNode.textContent)
                     const commonAncestor = findCommonAncestor(startNode, endNode)
 
+                    /** @type {Node} */
                     let commonAncestorStartChild = startNode
                     while(commonAncestorStartChild.parentNode !== commonAncestor){
                         commonAncestorStartChild = commonAncestorStartChild.parentNode
                     }
 
+                    /** @type {Node} */
                     let commonAncestorEndChild = endNode
                     while(commonAncestorEndChild.parentNode !== commonAncestor){
                         commonAncestorEndChild = commonAncestorEndChild.parentNode
@@ -324,7 +328,6 @@ function consolidateMarkers(document){
         }
     }
 
-    //console.log('consolidatedMarkers', consolidatedMarkers)
 }
 
 /**

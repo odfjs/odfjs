@@ -385,7 +385,8 @@ const EACH = eachStartMarkerRegex.source
  * @returns {void}
  */
 export default function fillOdtElementTemplate(rootElement, compartment) {
-    //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName)
+    //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName, rootElement.textContent)
+    //console.log('fillTemplatedOdtElement', rootElement.childNodes[0].childNodes.length)
 
     let currentlyOpenBlocks = []
 
