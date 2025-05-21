@@ -3,5 +3,7 @@ node_modules/
 build/*
 
 .~lock*
+**/*(Copie)*
+**/*(Copy)*
 
 stats.html

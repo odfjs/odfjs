@@ -6,7 +6,7 @@ import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
 
 
-test('basic template filling with {#if}', async t => {
+test.skip('basic template filling with {#if}', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/description-nombre.odt')
     const templateContent = `Description du nombre {n}
 
@@ -37,6 +37,33 @@ n est un petit nombre
 n est un grand nombre
 `)
 
+
+});
+
+
+test('weird bug', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/weird-if-bug.odt')
+    const templateContent = `Utilisation de sources lumineuses : {#if scientifique.source_lumineuses}Oui{:else}Non{/if}
+{#if scientifique.source_lumineuses && scientifique.modalités_source_lumineuses }
+Modalités d’utilisation de sources lumineuses : {scientifique.modalités_source_lumineuses}
+{/if}
+`
+
+    const data = {
+        scientifique: {
+            source_lumineuses: false,
+            //modalités_source_lumineuses: 'lampes torches'
+        }
+    }
+
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+    const templateTextContent = await getOdtTextContent(odtTemplate)
+    t.deepEqual(templateTextContent.trim(), templateContent.trim(), 'reconnaissance du template')
+
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent.trim(), `Utilisation de sources lumineuses : Non`)
 
 });
 

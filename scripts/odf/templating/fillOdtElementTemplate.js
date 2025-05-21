@@ -85,7 +85,8 @@ function findPlacesToFillInString(str, compartment) {
  * @returns {{startChild: Node, endChild:Node, content: DocumentFragment}}
  */
 function extractBlockContent(blockStartNode, blockEndNode) {
-    //console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
+    console.log('[extractBlockContent] blockStartNode', blockStartNode.textContent)
+    console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
 
     // find common ancestor of blockStartNode and blockEndNode
     let commonAncestor
@@ -93,6 +94,7 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     let startAncestor = blockStartNode
     let endAncestor = blockEndNode
 
+    // ancestries in order of deepest first, closest to root last
     const startAncestry = new Set([startAncestor])
     const endAncestry = new Set([endAncestor])
 
@@ -117,10 +119,12 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     const startAncestryToCommonAncestor = [...startAncestry].slice(0, [...startAncestry].indexOf(commonAncestor))
     const endAncestryToCommonAncestor = [...endAncestry].slice(0, [...endAncestry].indexOf(commonAncestor))
 
+    // direct children of commonAncestor in the branch or blockStartNode and blockEndNode respectively
     const startChild = startAncestryToCommonAncestor.at(-1)
     const endChild = endAncestryToCommonAncestor.at(-1)
 
-    //console.log('[extractBlockContent] endChild', endChild.textContent)
+    console.log('[extractBlockContent] startChild', startChild.textContent)
+    console.log('[extractBlockContent] endChild', endChild.textContent)
 
     // Extract DOM content in a documentFragment
     /** @type {DocumentFragment} */
@@ -128,6 +132,21 @@ function extractBlockContent(blockStartNode, blockEndNode) {
 
     /** @type {Element[]} */
     const repeatedPatternArray = []
+
+    // get start branch "right" content
+    for(const startAncestor of startAncestry){
+        if(startAncestor === startChild)
+            break;
+        
+        let sibling = startAncestor.nextSibling
+
+        while(sibling) {
+            repeatedPatternArray.push(sibling)
+            sibling = sibling.nextSibling;
+        }
+    }
+
+
     let sibling = startChild.nextSibling
 
     while(sibling !== endChild) {
@@ -135,12 +154,39 @@ function extractBlockContent(blockStartNode, blockEndNode) {
         sibling = sibling.nextSibling;
     }
 
+
+    // get end branch "left" content
+    for(const endAncestor of [...endAncestry].reverse()){
+        if(endAncestor === endChild)
+            continue; // already taken care of
+        
+        let sibling = endAncestor.previousSibling
+
+        const reversedRepeatedPatternArrayContribution = []
+
+        while(sibling) {
+            reversedRepeatedPatternArrayContribution.push(sibling)
+            sibling = sibling.previousSibling;
+        }
+
+        const repeatedPatternArrayContribution = reversedRepeatedPatternArrayContribution.reverse()
+
+        repeatedPatternArray.push(...repeatedPatternArrayContribution)
+
+        if(endAncestor === blockEndNode)
+            break;
+    }
+    
+
+    console.log('repeatedPatternArray', repeatedPatternArray.map(n => n.textContent))
+
+
     for(const sibling of repeatedPatternArray) {
         sibling.parentNode?.removeChild(sibling)
         contentFragment.appendChild(sibling)
     }
 
-    //console.log('extractBlockContent contentFragment', contentFragment.textContent)
+    console.log('extractBlockContent contentFragment', contentFragment.textContent)
 
     return {
         startChild,
@@ -205,6 +251,8 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
         markerNodes
             .add(startIfThenChild).add(endIfThenChild)
     }
+
+    console.log('chosen fragment', chosenFragment?.textContent)
 
 
     if(chosenFragment) {

@@ -3,6 +3,7 @@
 import {traverse, Node} from "../../DOMUtils.js";
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
 
+
 /**
  * 
  * @param {string} text 
@@ -165,9 +166,9 @@ function consolidateMarkers(document){
         ...Array.from(document.getElementsByTagName('text:h'))
     ]
 
-    for(const potentialMarkersContainer of potentialMarkersContainers) {
-        const consolidatedMarkers = []
+    const consolidatedMarkers = []
 
+    for(const potentialMarkersContainer of potentialMarkersContainers) {
         /** @type {Text[]} */
         let containerTextNodesInTreeOrder = [];
 
@@ -199,8 +200,8 @@ function consolidateMarkers(document){
         ];
 
         
-        //if(positionedMarkers.length >= 1)
-        //    console.log('positionedMarkers', positionedMarkers)
+        if(positionedMarkers.length >= 1)
+            console.log('positionedMarkers', positionedMarkers)
         
 
         while(consolidatedMarkers.length < positionedMarkers.length) {
@@ -322,6 +323,8 @@ function consolidateMarkers(document){
             }
         }
     }
+
+    console.log('consolidatedMarkers', consolidatedMarkers)
 }
 
 /**
@@ -548,8 +551,22 @@ export default function prepareTemplateDOMTree(document){
     // after consolidateMarkers, each marker is in at most one text node
     // (formatting with markers is removed)
 
+    console.log('document text after consolidateMarkers', document.documentElement.textContent)
+    /*traverse(document, (node) => {
+        if(node.nodeType === Node.TEXT_NODE || node.nodeName.startsWith('text')){
+            console.log('node', node.nodeName, node.textContent)
+        }
+    })*/
+
+
     isolateMarkerText(document)
     // after isolateMarkerText, each marker is in exactly one text node
     // (markers are separated from text that was before or after in the same text node)
 
+    console.log('document text after isolateMarkerText', document.documentElement.textContent)
+    /*traverse(document, (node) => {
+        if(node.nodeType === Node.TEXT_NODE || node.nodeName.startsWith('text')){
+            console.log('node', node.nodeName, node.textContent)
+        }
+    })*/
 }
