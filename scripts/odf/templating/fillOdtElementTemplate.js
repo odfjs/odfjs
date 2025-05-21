@@ -131,17 +131,17 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     const contentFragment = blockStartNode.ownerDocument.createDocumentFragment()
 
     /** @type {Element[]} */
-    const repeatedPatternArray = []
+    const blockContent = []
 
     // get start branch "right" content
-    for(const startAncestor of startAncestry){
+    for(const startAncestor of startAncestryToCommonAncestor){
         if(startAncestor === startChild)
             break;
         
         let sibling = startAncestor.nextSibling
 
         while(sibling) {
-            repeatedPatternArray.push(sibling)
+            blockContent.push(sibling)
             sibling = sibling.nextSibling;
         }
     }
@@ -150,38 +150,38 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     let sibling = startChild.nextSibling
 
     while(sibling !== endChild) {
-        repeatedPatternArray.push(sibling)
+        blockContent.push(sibling)
         sibling = sibling.nextSibling;
     }
 
 
     // get end branch "left" content
-    for(const endAncestor of [...endAncestry].reverse()){
+    for(const endAncestor of [...endAncestryToCommonAncestor].reverse()){
         if(endAncestor === endChild)
             continue; // already taken care of
         
         let sibling = endAncestor.previousSibling
 
-        const reversedRepeatedPatternArrayContribution = []
+        const reversedBlockContentContribution = []
 
         while(sibling) {
-            reversedRepeatedPatternArrayContribution.push(sibling)
+            reversedBlockContentContribution.push(sibling)
             sibling = sibling.previousSibling;
         }
 
-        const repeatedPatternArrayContribution = reversedRepeatedPatternArrayContribution.reverse()
+        const blockContentContribution = reversedBlockContentContribution.reverse()
 
-        repeatedPatternArray.push(...repeatedPatternArrayContribution)
+        blockContent.push(...blockContentContribution)
 
         if(endAncestor === blockEndNode)
             break;
     }
     
 
-    //console.log('repeatedPatternArray', repeatedPatternArray.map(n => n.textContent))
+    //console.log('blockContent', blockContent.map(n => n.textContent))
 
 
-    for(const sibling of repeatedPatternArray) {
+    for(const sibling of blockContent) {
         sibling.parentNode?.removeChild(sibling)
         contentFragment.appendChild(sibling)
     }
