@@ -3,6 +3,10 @@
   "version": "0.21.0",
   "type": "module",
   "exports": "./exports.js",
+  "files": [
+    "exports.js",
+    "scripts"
+  ],
   "imports": {
     "#DOM": {
       "node": "./scripts/DOM/node.js",
