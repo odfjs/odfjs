@@ -85,8 +85,8 @@ function findPlacesToFillInString(str, compartment) {
  * @returns {{startChild: Node, endChild:Node, content: DocumentFragment}}
  */
 function extractBlockContent(blockStartNode, blockEndNode) {
-    console.log('[extractBlockContent] blockStartNode', blockStartNode.textContent)
-    console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
+    //console.log('[extractBlockContent] blockStartNode', blockStartNode.textContent)
+    //console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
 
     // find common ancestor of blockStartNode and blockEndNode
     let commonAncestor
@@ -123,8 +123,8 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     const startChild = startAncestryToCommonAncestor.at(-1)
     const endChild = endAncestryToCommonAncestor.at(-1)
 
-    console.log('[extractBlockContent] startChild', startChild.textContent)
-    console.log('[extractBlockContent] endChild', endChild.textContent)
+    //console.log('[extractBlockContent] startChild', startChild.textContent)
+    //console.log('[extractBlockContent] endChild', endChild.textContent)
 
     // Extract DOM content in a documentFragment
     /** @type {DocumentFragment} */
@@ -178,7 +178,7 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     }
     
 
-    console.log('repeatedPatternArray', repeatedPatternArray.map(n => n.textContent))
+    //console.log('repeatedPatternArray', repeatedPatternArray.map(n => n.textContent))
 
 
     for(const sibling of repeatedPatternArray) {
@@ -186,7 +186,7 @@ function extractBlockContent(blockStartNode, blockEndNode) {
         contentFragment.appendChild(sibling)
     }
 
-    console.log('extractBlockContent contentFragment', contentFragment.textContent)
+    //console.log('extractBlockContent contentFragment', contentFragment.textContent)
 
     return {
         startChild,
@@ -251,9 +251,6 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
         markerNodes
             .add(startIfThenChild).add(endIfThenChild)
     }
-
-    console.log('chosen fragment', chosenFragment?.textContent)
-
 
     if(chosenFragment) {
         fillOdtElementTemplate(
@@ -410,9 +407,11 @@ export default function fillOdtElementTemplate(rootElement, compartment) {
     let ifBlockConditionExpression
     // Traverse "in document order"
 
+
     // @ts-ignore
     traverse(rootElement, currentNode => {
-        //console.log('currentlyUnclosedBlocks', currentlyUnclosedBlocks)
+        //console.log('currentlyOpenBlocks', currentlyOpenBlocks)
+        
         const insideAnOpenBlock = currentlyOpenBlocks.length >= 1
 
         if(currentNode.nodeType === Node.TEXT_NODE) {
@@ -521,9 +520,9 @@ export default function fillOdtElementTemplate(rootElement, compartment) {
             /**
              * Looking for {/if}
              */
-            const hasClosingMarker = text.includes(closingIfMarker);
+            const ifClosingMarker = text.includes(closingIfMarker);
 
-            if(hasClosingMarker) {
+            if(ifClosingMarker) {
                 if(!insideAnOpenBlock)
                     throw new Error('{/if} without a corresponding {#if}')
 
@@ -546,6 +545,8 @@ export default function fillOdtElementTemplate(rootElement, compartment) {
                 else {
                     // do nothing because the marker is too deep
                 }
+
+                currentlyOpenBlocks.pop()
             }
 
 

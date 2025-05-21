@@ -6,7 +6,7 @@ import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
 
 
-test.skip('basic template filling with {#if}', async t => {
+test('basic template filling with {#if}', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/description-nombre.odt')
     const templateContent = `Description du nombre {n}
 
@@ -42,7 +42,7 @@ n est un grand nombre
 
 
 test('weird bug', async t => {
-    const templatePath = join(import.meta.dirname, '../fixtures/weird-if-bug.odt')
+    const templatePath = join(import.meta.dirname, '../fixtures/left-branch-content-and-two-consecutive-ifs.odt')
     const templateContent = `Utilisation de sources lumineuses : {#if scientifique.source_lumineuses}Oui{:else}Non{/if}
 {#if scientifique.source_lumineuses && scientifique.modalités_source_lumineuses }
 Modalités d’utilisation de sources lumineuses : {scientifique.modalités_source_lumineuses}
