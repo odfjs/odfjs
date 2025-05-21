@@ -3,6 +3,7 @@
 import {traverse, Node} from "../../DOMUtils.js";
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
 
+
 /**
  * 
  * @param {string} text 
@@ -166,6 +167,7 @@ function consolidateMarkers(document){
     ]
 
     for(const potentialMarkersContainer of potentialMarkersContainers) {
+        /** @type {{marker: string, index: number}[]} */
         const consolidatedMarkers = []
 
         /** @type {Text[]} */
@@ -244,13 +246,16 @@ function consolidateMarkers(document){
 
                 // Check if marker spans multiple nodes
                 if(startNode !== endNode) {
+                    //console.log('startNode !== endNode', startNode.textContent, endNode.textContent)
                     const commonAncestor = findCommonAncestor(startNode, endNode)
 
+                    /** @type {Node} */
                     let commonAncestorStartChild = startNode
                     while(commonAncestorStartChild.parentNode !== commonAncestor){
                         commonAncestorStartChild = commonAncestorStartChild.parentNode
                     }
 
+                    /** @type {Node} */
                     let commonAncestorEndChild = endNode
                     while(commonAncestorEndChild.parentNode !== commonAncestor){
                         commonAncestorEndChild = commonAncestorEndChild.parentNode
@@ -322,6 +327,7 @@ function consolidateMarkers(document){
             }
         }
     }
+
 }
 
 /**
@@ -551,5 +557,4 @@ export default function prepareTemplateDOMTree(document){
     isolateMarkerText(document)
     // after isolateMarkerText, each marker is in exactly one text node
     // (markers are separated from text that was before or after in the same text node)
-
 }

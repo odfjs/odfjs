@@ -85,6 +85,7 @@ function findPlacesToFillInString(str, compartment) {
  * @returns {{startChild: Node, endChild:Node, content: DocumentFragment}}
  */
 function extractBlockContent(blockStartNode, blockEndNode) {
+    //console.log('[extractBlockContent] blockStartNode', blockStartNode.textContent)
     //console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
 
     // find common ancestor of blockStartNode and blockEndNode
@@ -93,6 +94,7 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     let startAncestor = blockStartNode
     let endAncestor = blockEndNode
 
+    // ancestries in order of deepest first, closest to root last
     const startAncestry = new Set([startAncestor])
     const endAncestry = new Set([endAncestor])
 
@@ -117,9 +119,11 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     const startAncestryToCommonAncestor = [...startAncestry].slice(0, [...startAncestry].indexOf(commonAncestor))
     const endAncestryToCommonAncestor = [...endAncestry].slice(0, [...endAncestry].indexOf(commonAncestor))
 
+    // direct children of commonAncestor in the branch or blockStartNode and blockEndNode respectively
     const startChild = startAncestryToCommonAncestor.at(-1)
     const endChild = endAncestryToCommonAncestor.at(-1)
 
+    //console.log('[extractBlockContent] startChild', startChild.textContent)
     //console.log('[extractBlockContent] endChild', endChild.textContent)
 
     // Extract DOM content in a documentFragment
@@ -127,15 +131,57 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     const contentFragment = blockStartNode.ownerDocument.createDocumentFragment()
 
     /** @type {Element[]} */
-    const repeatedPatternArray = []
+    const blockContent = []
+
+    // get start branch "right" content
+    for(const startAncestor of startAncestryToCommonAncestor){
+        if(startAncestor === startChild)
+            break;
+        
+        let sibling = startAncestor.nextSibling
+
+        while(sibling) {
+            blockContent.push(sibling)
+            sibling = sibling.nextSibling;
+        }
+    }
+
+
     let sibling = startChild.nextSibling
 
     while(sibling !== endChild) {
-        repeatedPatternArray.push(sibling)
+        blockContent.push(sibling)
         sibling = sibling.nextSibling;
     }
 
-    for(const sibling of repeatedPatternArray) {
+
+    // get end branch "left" content
+    for(const endAncestor of [...endAncestryToCommonAncestor].reverse()){
+        if(endAncestor === endChild)
+            continue; // already taken care of
+        
+        let sibling = endAncestor.previousSibling
+
+        const reversedBlockContentContribution = []
+
+        while(sibling) {
+            reversedBlockContentContribution.push(sibling)
+            sibling = sibling.previousSibling;
+        }
+
+        const blockContentContribution = reversedBlockContentContribution.reverse()
+
+        blockContent.push(...blockContentContribution)
+
+        if(endAncestor === blockEndNode)
+            break;
+    }
+    
+
+    //console.log('blockContent', blockContent.map(n => n.textContent))
+
+
+    for(const sibling of blockContent) {
         sibling.parentNode?.removeChild(sibling)
         contentFragment.appendChild(sibling)
     }
@@ -205,7 +251,6 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
         markerNodes
             .add(startIfThenChild).add(endIfThenChild)
     }
-
 
     if(chosenFragment) {
         fillOdtElementTemplate(
@@ -340,7 +385,8 @@ const EACH = eachStartMarkerRegex.source
  * @returns {void}
  */
 export default function fillOdtElementTemplate(rootElement, compartment) {
-    //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName)
+    //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName, rootElement.textContent)
+    //console.log('fillTemplatedOdtElement', rootElement.childNodes[0].childNodes.length)
 
     let currentlyOpenBlocks = []
 
@@ -362,9 +408,11 @@ export default function fillOdtElementTemplate(rootElement, compartment) {
     let ifBlockConditionExpression
     // Traverse "in document order"
 
+
     // @ts-ignore
     traverse(rootElement, currentNode => {
-        //console.log('currentlyUnclosedBlocks', currentlyUnclosedBlocks)
+        //console.log('currentlyOpenBlocks', currentlyOpenBlocks)
+        
         const insideAnOpenBlock = currentlyOpenBlocks.length >= 1
 
         if(currentNode.nodeType === Node.TEXT_NODE) {
@@ -473,9 +521,9 @@ export default function fillOdtElementTemplate(rootElement, compartment) {
             /**
              * Looking for {/if}
              */
-            const hasClosingMarker = text.includes(closingIfMarker);
+            const ifClosingMarker = text.includes(closingIfMarker);
 
-            if(hasClosingMarker) {
+            if(ifClosingMarker) {
                 if(!insideAnOpenBlock)
                     throw new Error('{/if} without a corresponding {#if}')
 
@@ -498,6 +546,8 @@ export default function fillOdtElementTemplate(rootElement, compartment) {
                 else {
                     // do nothing because the marker is too deep
                 }
+
+                currentlyOpenBlocks.pop()
             }
 
 

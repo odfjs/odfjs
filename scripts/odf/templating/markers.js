@@ -1,5 +1,5 @@
 // the regexps below are shared, so they shoudn't have state (no 'g' flag)
-export const variableRegex = /\{([^{#\/]+?)\}/
+export const variableRegex = /\{([^{#\/:]+?)\}/
 
 export const ifStartMarkerRegex = /{#if\s+([^}]+?)\s*}/;
 export const elseMarker = '{:else}'
