@@ -26,9 +26,7 @@ n est un grand nombre
     const odtResult3TextContent = await getOdtTextContent(odtResult3)
     t.deepEqual(odtResult3TextContent, `Description du nombre 3
 
-
 n est un petit nombre
-
 `)
 
 
@@ -56,9 +54,7 @@ n est un grand nombre
     const odtResult8TextContent = await getOdtTextContent(odtResult8)
     t.deepEqual(odtResult8TextContent, `Description du nombre 8
 
-
 n est un grand nombre
-
 `)
     }
     catch(e){console.error(e); throw e}

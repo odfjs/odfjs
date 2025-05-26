@@ -40,6 +40,8 @@ class TemplateDOMBranch{
     }
 
     removeLeafAndEmptyAncestors(){
+        //this.logBranch('[removeLeafAndEmptyAncestors] branch at the start')
+
         // it may happen (else marker of if/else/endif) that the leaf was already removed as part of another block
         // so before removing anything, let's update #ancestors and #leaf
 
@@ -47,18 +49,24 @@ class TemplateDOMBranch{
             if(!ancestor.parentNode){
                 // ancestor already removed from tree
                 this.#ancestors = this.#ancestors.slice(0, i)
-                this.#leafNode = this.#ancestors.at(-1)
                 return false;
             }
 
             return true // continue
         })
 
+        this.#leafNode = this.#ancestors.at(-1)
+
+        //this.logBranch('[removeLeafAndEmptyAncestors] after adjusting this.#ancestors')
+
         //console.log('removeLeafAndEmptyAncestors', this.#startNode.textContent)
-        let nextLeaf = this.#leafNode.parentNode
-        //console.log('nextLeaf', !!nextLeaf)
-        nextLeaf.removeChild(this.#leafNode)
-        this.#leafNode = nextLeaf
+        let nextLeaf
+        if(this.#leafNode !== this.#branchBaseNode){
+            nextLeaf = this.#leafNode.parentNode
+            //console.log('nextLeaf', !!nextLeaf)
+            nextLeaf.removeChild(this.#leafNode)
+            this.#leafNode = nextLeaf
+        }
 
         while(this.#leafNode !== this.#branchBaseNode && 
             (this.#leafNode.textContent === null || this.#leafNode.textContent.trim() === ''))
@@ -76,10 +84,10 @@ class TemplateDOMBranch{
      * @param {number} [startIndex]
      */
     removeRightContent(startIndex = 0){
-        console.log('[removeRightContent]', startIndex, this.#ancestors.slice(startIndex).length)
+        //console.log('[removeRightContent]', startIndex, this.#ancestors.slice(startIndex).length)
 
         for(const branchNode of this.#ancestors.slice(startIndex)){
-            console.log('[removeRightContent]', branchNode.nodeType, branchNode.nodeName)
+            //console.log('[removeRightContent]', branchNode.nodeType, branchNode.nodeName)
 
             let toRemove = branchNode.nextSibling
 
@@ -154,7 +162,7 @@ class TemplateDOMBranch{
         console.group('[TemplateDOMBranch] Showing branch')
         console.log(message)
         for(const node of this.#ancestors){
-            console.log('branch node', node.nodeType, node.nodeName)
+            console.log('branch node', node.nodeType, node.nodeName, node.nodeType === node.TEXT_NODE ? node.textContent : '')
         }
         console.groupEnd()
     }
@@ -183,9 +191,9 @@ class TemplateBlock{
         // @ts-expect-error xmldom.Node
         this.#commonAncestor = findCommonAncestor(startNode, endNode)
 
-        console.log('create start branch')
+        //console.log('create start branch')
         this.startBranch = new TemplateDOMBranch(this.#commonAncestor, startNode)
-        console.log('create end branch')
+        //console.log('create end branch')
         this.endBranch = new TemplateDOMBranch(this.#commonAncestor, endNode)
 
 
@@ -198,11 +206,12 @@ class TemplateBlock{
             content = content.nextSibling
         }
 
-        console.log('\n== TemplateBlock ==')
-        console.log('startBranch', this.startBranch.at(1).nodeName, this.startBranch.at(1).textContent)
-        console.log('middleContent', this.#middleContent.map(n => n.textContent).join(''))
-        console.log('endBranch', this.startBranch.at(1).nodeName, this.endBranch.at(1).textContent)
-        console.log('common ancestor', this.#commonAncestor.nodeName, '\n')
+        //console.group('\n== TemplateBlock ==')
+        //console.log('startBranch', this.startBranch.at(1).nodeName, this.startBranch.at(1).textContent)
+        //console.log('middleContent', this.#middleContent.map(n => n.textContent).join(''))
+        //console.log('endBranch', this.startBranch.at(1).nodeName, this.endBranch.at(1).textContent)
+        //console.log('common ancestor', this.#commonAncestor.nodeName, '\n')
+        //console.groupEnd()
     }
 
     removeMarkersAndEmptyAncestors(){
@@ -217,31 +226,31 @@ class TemplateBlock{
      * @param {Compartment} compartement 
      */
     fillBlockContentTemplate(compartement){
-        console.log('[fillBlockContentTemplate] start')
+        //console.log('[fillBlockContentTemplate] start')
 
         const startChild = this.startBranch.at(1)
         if(startChild /*&& startChild !== */){
-            console.log('[fillBlockContentTemplate] startChild', startChild.nodeName, startChild.textContent)
+            //console.log('[fillBlockContentTemplate] startChild', startChild.nodeName, startChild.textContent)
             fillOdtElementTemplate(startChild, compartement)
         }
-        console.log('[fillBlockContentTemplate] after startChild')
+        //console.log('[fillBlockContentTemplate] after startChild')
 
         for(const content of this.#middleContent){
             fillOdtElementTemplate(content, compartement)
         }
-        console.log('[fillBlockContentTemplate] after middleContent')
+        //console.log('[fillBlockContentTemplate] after middleContent')
 
         const endChild = this.endBranch.at(1)
-        console.log('fillBlockContentTemplate] [endBranch]')
-        this.endBranch.logBranch('endBranch')
+        //console.log('fillBlockContentTemplate] [endBranch]')
+        //this.endBranch.logBranch('endBranch')
 
         if(endChild){
-            console.log('[fillBlockContentTemplate] endChild', endChild.nodeName, endChild.textContent)
+            //console.log('[fillBlockContentTemplate] endChild', endChild.nodeName, endChild.textContent)
             fillOdtElementTemplate(endChild, compartement)
         }
-        console.log('[fillBlockContentTemplate] after endChild')
+        //console.log('[fillBlockContentTemplate] after endChild')
 
-        console.log('[fillBlockContentTemplate] end')
+        //console.log('[fillBlockContentTemplate] end')
     }
 
     removeContent(){
@@ -472,7 +481,7 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
     //console.log('fillEachBlock', iterableExpression, itemExpression)
 
     const docEl = startNode.ownerDocument.documentElement
-    console.log('[fillEachBlock] docEl', docEl.textContent)
+    //console.log('[fillEachBlock] docEl', docEl.textContent)
 
     const repeatedTemplateBlock = new TemplateBlock(startNode, endNode)
 
@@ -496,12 +505,12 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         let nextTemplateBlock = repeatedTemplateBlock
 
         iterable.forEach((item, i) => {
-            console.log('[fillEachBlock] loop i', i, docEl.textContent)
+            //console.log('[fillEachBlock] loop i', i, docEl.textContent)
             const firstItem = i === 0
             const lastItem = i === iterable.length - 1
             let currentTemplateBlock = nextTemplateBlock;
 
-            console.log('currentTemplateBlock', currentTemplateBlock.startBranch.at(0).textContent)
+            //console.log('currentTemplateBlock', currentTemplateBlock.startBranch.at(0).textContent)
 
             if(!lastItem){
                 nextTemplateBlock = currentTemplateBlock.cloneAndAppendAfter()
@@ -516,21 +525,18 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
                 currentTemplateBlock.startBranch.removeLeftContent(2)
             }
             if(!lastItem){
-                console.log('[fillEachBlock] removeRightContent')
+                //console.log('[fillEachBlock] removeRightContent')
                 currentTemplateBlock.endBranch.removeRightContent(2)
             }
 
-            console.log('[fillEachBlock] docEl i before removeMarkers', i, docEl.textContent)
+            //console.log('[fillEachBlock] docEl i before removeMarkers', i, docEl.textContent)
             currentTemplateBlock.removeMarkersAndEmptyAncestors()
-            console.log('[fillEachBlock] docEl i after removeMarkers', i, docEl.textContent)
+            //console.log('[fillEachBlock] docEl i after removeMarkers', i, docEl.textContent)
 
-            console.log('\nrecursive call to fillBlockContentTemplate')
+            //console.log('\nrecursive call to fillBlockContentTemplate')
             currentTemplateBlock.fillBlockContentTemplate(insideCompartment)
 
-
-
-
-            console.log('[fillEachBlock] docEl i after remove contents', i, docEl.textContent)
+            //console.log('[fillEachBlock] docEl i after remove contents', i, docEl.textContent)
 
         })
     }
