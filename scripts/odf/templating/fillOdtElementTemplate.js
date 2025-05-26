@@ -1,4 +1,4 @@
-import {traverse, Node} from '../../DOMUtils.js'
+import {traverse, Node, getAncestors, findCommonAncestor} from "../../DOMUtils.js";
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
 
 /**
@@ -6,6 +6,181 @@ import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, if
  * @property { {expression: string, replacedString:string}[] } expressions
  * @property {() => void} fill
  */
+
+class TemplateDOMBranch{
+    /** @type {Node} */
+    #startNode
+    
+    /** @type {Node} */
+    #leafNode
+
+    // ancestors with this.#ancestors[0] === this.#startNode and this.#ancestors.at(-1) === this.#leafNode
+    /** @type {Node[]} */
+    #ancestors
+
+    /**
+     * 
+     * @param {Node} startNode 
+     * @param {Node} leafNode 
+     */
+    constructor(startNode, leafNode){
+        this.#startNode = startNode
+        this.#leafNode = leafNode
+
+        this.#ancestors = getAncestors(this.#leafNode, this.#startNode).reverse()
+    }
+
+    /**
+     * 
+     * @param {number} n 
+     * @returns {Node | undefined}
+     */
+    at(n){
+        return this.#ancestors.at(n)
+    }
+
+    removeLeafAndEmptyAncestors(){
+        // it may happen (else marker of if/else/endif) that the leaf was already removed as part of another block
+        // so before removing anything, let's update #ancestors and #leaf
+
+        this.#ancestors.every((ancestor, i) => {
+            if(!ancestor.parentNode){
+                // ancestor already removed from tree
+                this.#ancestors = this.#ancestors.slice(0, i)
+                this.#leafNode = this.#ancestors.at(-1)
+                return false;
+            }
+
+            return true // continue
+        })
+
+        //console.log('removeLeafAndEmptyAncestors', this.#startNode.textContent)
+        let nextLeaf = this.#leafNode.parentNode
+        //console.log('nextLeaf', !!nextLeaf)
+        nextLeaf.removeChild(this.#leafNode)
+        this.#leafNode = nextLeaf
+
+        while(this.#leafNode !== this.#startNode && 
+            this.#leafNode.textContent && this.#leafNode.textContent.trim() === '')
+        {
+            nextLeaf = this.#leafNode.parentNode
+            this.#leafNode.parentNode.removeChild(this.#leafNode)
+            this.#leafNode = nextLeaf
+        }
+
+        this.#ancestors = getAncestors(this.#startNode, this.#leafNode).reverse()
+    }
+
+    /**
+     * 
+     * @param {number} [startIndex]
+     */
+    removeRightContent(startIndex = 0){
+        for(const branchNode of this.#ancestors.slice(startIndex)){
+            let toRemove = branchNode.nextSibling
+
+            while(toRemove){
+                const toRemoveNext = toRemove.nextSibling
+                toRemove.parentNode.removeChild(toRemove)
+                toRemove = toRemoveNext
+            }
+        }
+    }
+
+    /**
+     * 
+     * @param {number} [startIndex]
+     */
+    removeLeftContent(startIndex = 0){
+        for(const branchNode of this.#ancestors.slice(startIndex)){
+            let toRemove = branchNode.previousSibling
+
+            while(toRemove){
+                const toRemoveNext = toRemove.previousSibling
+                toRemove.parentNode.removeChild(toRemove)
+                toRemove = toRemoveNext
+            }
+        }
+    }
+
+    
+}
+
+
+class TemplateBlock{
+    /** @type {Element | Document | DocumentFragment} */
+    #commonAncestor;
+    /** @type {TemplateDOMBranch} */
+    #startBranch;
+    /** @type {TemplateDOMBranch} */
+    #endBranch;
+
+    /** @type {Node[]} */
+    #middleContent;
+
+    /**
+     * 
+     * @param {Node} startMarkerNode 
+     * @param {Node} endMarkerNode 
+     */
+    constructor(startMarkerNode, endMarkerNode){
+        // @ts-expect-error xmldom.Node
+        this.#commonAncestor = findCommonAncestor(startMarkerNode, endMarkerNode)
+
+        this.#startBranch = new TemplateDOMBranch(this.#commonAncestor, startMarkerNode)
+        this.#endBranch = new TemplateDOMBranch(this.#commonAncestor, endMarkerNode)
+
+        this.#middleContent = []
+
+        let content = this.#startBranch.at(1).nextSibling
+        while(content && content !== this.#endBranch.at(1)){
+            this.#middleContent.push(content)
+            content = content.nextSibling
+        }
+
+        //console.log('TemplateBlock')
+        //console.log('startBranch', this.#startBranch.at(1).textContent)
+        //console.log('middleContent', this.#middleContent.map(n => n.textContent).join(''))
+        //console.log('endBranch', this.#endBranch.at(1).textContent)
+    }
+
+    removeMarkersAndEmptyAncestors(){
+        //console.log('removeMarkersAndEmptyAncestors startBranch')
+        this.#startBranch.removeLeafAndEmptyAncestors()
+        //console.log('removeMarkersAndEmptyAncestors endBranch')
+        this.#endBranch.removeLeafAndEmptyAncestors()
+    }
+
+    /**
+     * 
+     * @param {Compartment} compartement 
+     */
+    fillBlockContentTemplate(compartement){
+        const startChild = this.#startBranch.at(1)
+        if(startChild){
+            fillOdtElementTemplate(startChild, compartement)
+        }
+
+        for(const content of this.#middleContent){
+            fillOdtElementTemplate(content, compartement)
+        }
+
+        const endChild = this.#endBranch.at(1)
+        if(endChild){
+            fillOdtElementTemplate(endChild, compartement)
+        }
+    }
+
+    removeContent(){
+        this.#startBranch.removeRightContent(2)
+
+        for(const content of this.#middleContent){
+            content.parentNode.removeChild(content)
+        }
+
+        this.#endBranch.removeLeftContent(2)
+    }
+}
 
 
 /**
@@ -82,7 +257,7 @@ function findPlacesToFillInString(str, compartment) {
  * 
  * @param {Node} blockStartNode 
  * @param {Node} blockEndNode 
- * @returns {{startChild: Node, endChild:Node, content: DocumentFragment}}
+ * @returns {{removeMarkers: () => void, insertContent: (n : Node) => void, content: DocumentFragment}}
  */
 function extractBlockContent(blockStartNode, blockEndNode) {
     //console.log('[extractBlockContent] blockStartNode', blockStartNode.textContent)
@@ -116,6 +291,8 @@ function extractBlockContent(blockStartNode, blockEndNode) {
         commonAncestor = startAncestor
     }
 
+    //console.log('extractBlockContent', commonAncestor.textContent)
+
     const startAncestryToCommonAncestor = [...startAncestry].slice(0, [...startAncestry].indexOf(commonAncestor))
     const endAncestryToCommonAncestor = [...endAncestry].slice(0, [...endAncestry].indexOf(commonAncestor))
 
@@ -123,8 +300,8 @@ function extractBlockContent(blockStartNode, blockEndNode) {
     const startChild = startAncestryToCommonAncestor.at(-1)
     const endChild = endAncestryToCommonAncestor.at(-1)
 
-    //console.log('[extractBlockContent] startChild', startChild.textContent)
-    //console.log('[extractBlockContent] endChild', endChild.textContent)
+    //console.log('[extractBlockContent] startChild', startChild.childNodes.length, startChild.textContent)
+    //console.log('[extractBlockContent] endChild', endChild.childNodes.length,endChild.textContent)
 
     // Extract DOM content in a documentFragment
     /** @type {DocumentFragment} */
@@ -188,9 +365,68 @@ function extractBlockContent(blockStartNode, blockEndNode) {
 
     //console.log('extractBlockContent contentFragment', contentFragment.textContent)
 
+    let insertionParent;
+
+    if(startAncestryToCommonAncestor.length >= endAncestryToCommonAncestor.length){
+        insertionParent = blockStartNode.parentNode
+    }
+    else{
+        insertionParent = blockEndNode.parentNode
+    }
+
+    let insertionBeforeNodeCandidates
+    if(blockEndNode.nextSibling){
+        insertionBeforeNodeCandidates = [blockEndNode.nextSibling]
+        while(insertionBeforeNodeCandidates.at(-1).nextSibling){
+            insertionBeforeNodeCandidates.push(insertionBeforeNodeCandidates.at(-1).nextSibling)
+        }
+    }
+
+    /** 
+     * @param {Node} content
+     */
+    function insertContent(content){
+        //console.log('insertContent', node.textContent, insertionBeforeNodeCandidates.map(n => `${n.nodeName} - ${n.textContent}`))
+        let insertionBeforeNode
+
+        if(insertionBeforeNodeCandidates){
+            insertionBeforeNode = insertionBeforeNodeCandidates.find(node => node.parentNode === insertionParent)
+        }
+
+        console.log('insertContent insertionBeforeNode', insertionBeforeNode && insertionBeforeNode.textContent)
+
+
+        if(insertionBeforeNode){
+            insertionParent.insertBefore(content, insertionBeforeNode)
+        }
+        else{
+            console.log('insertionParent', insertionParent.nodeName)
+            console.log('insertionParent content before append', insertionParent.textContent)
+            //console.log('insertionParent owner doc', insertionParent.ownerDocument)
+            
+            insertionParent.appendChild(content)
+            console.log('insertionParent content after append', insertionParent.textContent)
+        }
+    }
+
+    console.log('contentFragment', 
+        contentFragment.childNodes.length, 
+        contentFragment.childNodes[0].nodeName,
+        contentFragment.textContent
+    )
+
     return {
-        startChild,
-        endChild,
+        removeMarkers(){
+            for(const marker of [blockStartNode, blockEndNode]){
+                console.log('removing marker', marker.nodeName, marker.textContent)
+
+                try{
+                    marker.parentNode.removeChild(marker)
+                }
+                catch(e){}
+            }  
+        },
+        insertContent,
         content: contentFragment
     }
 }
@@ -209,65 +445,43 @@ function extractBlockContent(blockStartNode, blockEndNode) {
 function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment) {
     const conditionValue = compartment.evaluate(ifBlockConditionExpression)
 
-    let startChild
-    let endChild
-
-    let markerNodes = new Set()
-
-    let chosenFragment
+    /** @type {TemplateBlock | undefined} */
+    let thenTemplateBlock
+    /** @type {TemplateBlock | undefined} */
+    let elseTemplateBlock
 
     if(ifElseMarkerNode) {
-        const {
-            startChild: startIfThenChild,
-            endChild: endIfThenChild,
-            content: thenFragment
-        } = extractBlockContent(ifOpeningMarkerNode, ifElseMarkerNode)
+        /*console.log('before first extract', 
+            ifOpeningMarkerNode.childNodes.length, ifOpeningMarkerNode.textContent, 
+            ifElseMarkerNode.childNodes.length, ifElseMarkerNode.textContent
+        )*/
 
-        const {
-            startChild: startIfElseChild,
-            endChild: endIfElseChild,
-            content: elseFragment
-        } = extractBlockContent(ifElseMarkerNode, ifClosingMarkerNode)
-
-        chosenFragment = conditionValue ? thenFragment : elseFragment
-        startChild = startIfThenChild
-        endChild = endIfElseChild
-
-        markerNodes
-            .add(startIfThenChild).add(endIfThenChild)
-            .add(startIfElseChild).add(endIfElseChild)
+        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifElseMarkerNode)
+        elseTemplateBlock = new TemplateBlock(ifElseMarkerNode, ifClosingMarkerNode)
     }
     else {
-        const {
-            startChild: startIfThenChild,
-            endChild: endIfThenChild,
-            content: thenFragment
-        } = extractBlockContent(ifOpeningMarkerNode, ifClosingMarkerNode)
-
-        chosenFragment = conditionValue ? thenFragment : undefined
-        startChild = startIfThenChild
-        endChild = endIfThenChild
-
-        markerNodes
-            .add(startIfThenChild).add(endIfThenChild)
+        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifClosingMarkerNode)
     }
 
-    if(chosenFragment) {
-        fillOdtElementTemplate(
-            chosenFragment,
-            compartment
-        )
-
-        endChild.parentNode.insertBefore(chosenFragment, endChild)
+    thenTemplateBlock.removeMarkersAndEmptyAncestors()
+    if(elseTemplateBlock){
+        elseTemplateBlock.removeMarkersAndEmptyAncestors()
     }
 
-    for(const markerNode of markerNodes) {
-        try {
-            // may throw if node already out of tree
-            // might happen if 
-            markerNode.parentNode.removeChild(markerNode)
+
+    if(conditionValue) {
+        thenTemplateBlock.fillBlockContentTemplate(compartment)
+
+        if(elseTemplateBlock){
+            elseTemplateBlock.removeContent()
         }
-        catch(e) {}
+    }
+    else{
+        thenTemplateBlock.removeContent()
+
+        if(elseTemplateBlock){
+            elseTemplateBlock.fillBlockContentTemplate(compartment)
+        }
     }
 
 }
@@ -284,7 +498,9 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
 function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment) {
     //console.log('fillEachBlock', iterableExpression, itemExpression)
 
-    const {startChild, endChild, content: repeatedFragment} = extractBlockContent(startNode, endNode)
+    const docEl = startNode.ownerDocument.documentElement
+
+    const {removeMarkers, insertContent, content: repeatedFragment} = extractBlockContent(startNode, endNode)
 
     // Find the iterable in the data
     // PPP eventually, evaluate the expression as a JS expression
@@ -296,6 +512,26 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 
     let firstItemFirstChild
     let lastItemLastChild
+
+    // store before-text in startNodePreviousSiblings
+    const startNodePreviousSiblings = []
+    let startNodePreviousSibling = startNode.previousSibling
+    while(startNodePreviousSibling){
+        startNodePreviousSiblings.push(startNodePreviousSibling)
+        startNodePreviousSibling = startNodePreviousSibling.previousSibling
+    }
+
+    // set the array back to tree order
+    startNodePreviousSiblings.reverse()
+
+
+    // store after-text in endNodeNextSiblings
+    const endNodeNextSiblings = []
+    let endNodeNextSibling = endNode.nextSibling
+    while(endNodeNextSibling){
+        endNodeNextSiblings.push(endNodeNextSibling)
+        endNodeNextSibling = endNodeNextSibling.nextSibling
+    }
 
     // create each loop result
     // using a for-of loop to accept all iterable values
@@ -316,6 +552,9 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
             insideCompartment
         )
 
+        console.log('itemFragment', itemFragment.textContent)
+
+
         if(!firstItemFirstChild){
             firstItemFirstChild = itemFragment.firstChild
         }
@@ -323,19 +562,10 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         // eventually, will be set to the last item's last child
         lastItemLastChild = itemFragment.lastChild
 
-        endChild.parentNode.insertBefore(itemFragment, endChild)
-    }
+        insertContent(itemFragment)
 
-    // add before-text if any
-    const startNodePreviousSiblings = []
-    let startNodePreviousSibling = startNode.previousSibling
-    while(startNodePreviousSibling){
-        startNodePreviousSiblings.push(startNodePreviousSibling)
-        startNodePreviousSibling = startNodePreviousSibling.previousSibling
+        console.log('doc', docEl.textContent)
     }
-
-    // set the array back to tree order
-    startNodePreviousSiblings.reverse()
 
     if(startNodePreviousSiblings.length >= 1){
         let firstItemFirstestDescendant = firstItemFirstChild
@@ -348,13 +578,8 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         }
     }
 
-    // add after-text if any
-    const endNodeNextSiblings = []
-    let endNodeNextSibling = endNode.nextSibling
-    while(endNodeNextSibling){
-        endNodeNextSiblings.push(endNodeNextSibling)
-        endNodeNextSibling = endNodeNextSibling.nextSibling
-    }
+    console.log('doc after add before-text if any', docEl.textContent)
+
 
     if(endNodeNextSiblings.length >= 1){
         let lastItemLatestDescendant = lastItemLastChild
@@ -363,15 +588,16 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         }
 
         for(const afterEndNodeElement of endNodeNextSiblings){
+            console.log('doc in for-of', docEl.textContent)
+            console.log('afterEndNodeElement', afterEndNodeElement.textContent)
             lastItemLatestDescendant?.parentNode?.appendChild(afterEndNodeElement)
         }
     }
 
-
+    console.log('doc before removeMarkers', docEl.textContent)
     // remove block marker elements
-    startChild.parentNode.removeChild(startChild)
-    endChild.parentNode.removeChild(endChild)
-
+    removeMarkers()
+    console.log('doc after removeMarkers', docEl.textContent)
 }
 
 

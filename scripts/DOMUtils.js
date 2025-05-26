@@ -42,6 +42,51 @@ export function traverse(node, visit) {
     visit(node);
 }
 
+
+/**
+ * 
+ * @param {Node} node1 
+ * @param {Node} node2 
+ * @returns {Node}
+ */
+export function findCommonAncestor(node1, node2) {
+    const ancestors1 = getAncestors(node1);
+    const ancestors2 = new Set(getAncestors(node2));
+
+    for(const ancestor of ancestors1) {
+        if(ancestors2.has(ancestor)) {
+            return ancestor;
+        }
+    }
+
+    throw new Error(`node1 and node2 do not have a common ancestor`)
+}
+
+/**
+ * returns ancestors youngest first, oldest last
+ * 
+ * @param {Node} node 
+ * @param {Node} [until] 
+ * @returns {Node[]} 
+ */
+export function getAncestors(node, until = undefined) {
+    const ancestors = [];
+    let current = node;
+
+    while(current && current !== until) {
+        ancestors.push(current);
+        current = current.parentNode;
+    }
+
+    if(current === until){
+        ancestors.push(until);
+    }
+
+    return ancestors;
+}
+
+
+
 export {
     DOMParser, 
     XMLSerializer,

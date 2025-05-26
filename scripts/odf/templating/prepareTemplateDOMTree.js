@@ -1,6 +1,6 @@
 //@ts-check
 
-import {traverse, Node} from "../../DOMUtils.js";
+import {traverse, Node, getAncestors, findCommonAncestor} from "../../DOMUtils.js";
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
 
 
@@ -38,41 +38,7 @@ function findAllMatches(text, pattern) {
     return results;
 }
 
-/**
- * 
- * @param {Node} node1 
- * @param {Node} node2 
- * @returns {Node}
- */
-function findCommonAncestor(node1, node2) {
-    const ancestors1 = getAncestors(node1);
-    const ancestors2 = new Set(getAncestors(node2));
 
-    for(const ancestor of ancestors1) {
-        if(ancestors2.has(ancestor)) {
-            return ancestor;
-        }
-    }
-
-    throw new Error(`node1 and node2 do not have a common ancestor`)
-}
-
-/**
- * 
- * @param {Node} node 
- * @returns {Node[]}
- */
-function getAncestors(node) {
-    const ancestors = [];
-    let current = node;
-
-    while(current) {
-        ancestors.push(current);
-        current = current.parentNode;
-    }
-
-    return ancestors;
-}
 
 /**
  * text position of a node relative to a text nodes within a container
@@ -326,6 +292,8 @@ function consolidateMarkers(document){
                 consolidatedMarkers.push(positionedMarker)
             }
         }
+
+        //console.log('consolidatedMarkers', consolidatedMarkers)
     }
 
 }
@@ -441,6 +409,8 @@ function isolateMarkerText(document){
             // skip
         }
     })
+
+    //console.log('markerNodes', [...markerNodes].map(([node, markerType]) => [node.textContent, markerType]))
 
     return markerNodes
 }
