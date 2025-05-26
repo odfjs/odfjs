@@ -157,8 +157,8 @@ test('template filling - formatted-start-each-single-paragraph', async t => {
     const odtResult = await fillOdtTemplate(odtTemplate, data)
 
     const odtResultTextContent = await getOdtTextContent(odtResult)
-    console.log('odtResultTextContent', odtResultTextContent)
     t.deepEqual(odtResultTextContent, `
+
 37
 38
 39
@@ -179,14 +179,7 @@ test('template filling - formatted ghost if', async t => {
 
     const templateTextContent = await getOdtTextContent(odtTemplate)    
     t.deepEqual(templateTextContent.trim(), templateContent.trim(), 'reconnaissance du template')
-    let odtResult
-    try{
-        odtResult = await fillOdtTemplate(odtTemplate, data)
-    }
-    catch(e){
-        console.error('e', e)
-    }
-
+    let odtResult = await fillOdtTemplate(odtTemplate, data)
 
     const odtResultTextContent = await getOdtTextContent(odtResult)
     t.deepEqual(odtResultTextContent.trim(), `
