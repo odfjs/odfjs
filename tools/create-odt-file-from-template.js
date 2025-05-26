@@ -5,7 +5,7 @@ import {getOdtTemplate} from '../scripts/odf/odtTemplate-forNode.js'
 import {fillOdtTemplate} from '../exports.js'
 
 /*
-const templatePath = join(import.meta.dirname, '../tests/data/template-anniversaire.odt')
+const templatePath = join(import.meta.dirname, '../tests/fixtures/template-anniversaire.odt')
 const data = {
     nom: 'David Bruant',
     dateNaissance: '8 mars 1987'
@@ -13,8 +13,9 @@ const data = {
 */
 
 
-/*
-const templatePath = join(import.meta.dirname, '../tests/data/liste-courses.odt')
+
+
+const templatePath = join(import.meta.dirname, '../tests/fixtures/enum-courses.odt')
 const data = {
     listeCourses : [
         'Radis',
@@ -22,10 +23,9 @@ const data = {
         'Pâtes à lasagne (fraîches !)'
     ]
 }
-*/
 
 /*
-const templatePath = join(import.meta.dirname, '../tests/data/liste-fruits-et-légumes.odt')
+const templatePath = join(import.meta.dirname, '../tests/fixtures/liste-fruits-et-légumes.odt')
 const data = {
     fruits : [
         'Pastèque 🍉',
@@ -40,7 +40,7 @@ const data = {
 }*/
 
 /*
-const templatePath = join(import.meta.dirname, '../tests/data/légumes-de-saison.odt')
+const templatePath = join(import.meta.dirname, '../tests/fixtures/légumes-de-saison.odt')
 const data = {
     légumesSaison : [
         {
@@ -80,7 +80,7 @@ const data = {
 */
 
 /*
-const templatePath = join(import.meta.dirname, '../tests/data/tableau-simple.odt')
+const templatePath = join(import.meta.dirname, '../tests/fixtures/tableau-simple.odt')
 const data = {
     annéeConsos : [
         { année: 1970, conso: 36252.637},
@@ -95,16 +95,16 @@ const data = {
 
 
 /*
-const templatePath = join(import.meta.dirname, '../tests/data/template-avec-image.odt')
+const templatePath = join(import.meta.dirname, '../tests/fixtures/template-avec-image.odt')
 
 const data = {
     commentaire : `J'adooooooore 🤩 West covinaaaaaaaaaaa 🎶`
 }
 */
-
+/*
 const templatePath = join(import.meta.dirname, '../tests/fixtures/partially-formatted-variable.odt')
 const data = {nombre : 37}
-    
+*/  
 
 
 

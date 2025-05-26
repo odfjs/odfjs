@@ -9,7 +9,7 @@ import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, if
 
 class TemplateDOMBranch{
     /** @type {Node} */
-    #startNode
+    #branchBaseNode
     
     /** @type {Node} */
     #leafNode
@@ -20,14 +20,14 @@ class TemplateDOMBranch{
 
     /**
      * 
-     * @param {Node} startNode 
+     * @param {Node} branchBaseNode 
      * @param {Node} leafNode 
      */
-    constructor(startNode, leafNode){
-        this.#startNode = startNode
+    constructor(branchBaseNode, leafNode){
+        this.#branchBaseNode = branchBaseNode
         this.#leafNode = leafNode
 
-        this.#ancestors = getAncestors(this.#leafNode, this.#startNode).reverse()
+        this.#ancestors = getAncestors(this.#leafNode, this.#branchBaseNode).reverse()
     }
 
     /**
@@ -60,15 +60,15 @@ class TemplateDOMBranch{
         nextLeaf.removeChild(this.#leafNode)
         this.#leafNode = nextLeaf
 
-        while(this.#leafNode !== this.#startNode && 
-            this.#leafNode.textContent && this.#leafNode.textContent.trim() === '')
+        while(this.#leafNode !== this.#branchBaseNode && 
+            (this.#leafNode.textContent === null || this.#leafNode.textContent.trim() === ''))
         {
             nextLeaf = this.#leafNode.parentNode
             this.#leafNode.parentNode.removeChild(this.#leafNode)
             this.#leafNode = nextLeaf
         }
 
-        this.#ancestors = getAncestors(this.#startNode, this.#leafNode).reverse()
+        this.#ancestors = getAncestors(this.#branchBaseNode, this.#leafNode).reverse()
     }
 
     /**
@@ -103,7 +103,49 @@ class TemplateDOMBranch{
         }
     }
 
-    
+    /**
+     * 
+     * @returns {number[]}
+     */
+    getBranchPath(){
+        //console.log('[getBranchPath]', this.#branchBaseNode.nodeName, this.#branchBaseNode.textContent)
+        //console.log('[getBranchPath] leaf', this.#leafNode.nodeName, this.#leafNode.textContent)
+
+        /** @type {ReturnType<typeof TemplateDOMBranch.prototype.getBranchPath>} */
+        const pathFromLeafToBase = [];
+
+        let currentNode = this.#leafNode
+        let currentNodeParent = currentNode.parentNode
+
+        while(currentNodeParent){
+            //console.log('[getBranchPath] currentNodeParent', currentNodeParent.nodeName)
+            //console.log('[getBranchPath] looking for currentNode', currentNode.nodeName, currentNode.textContent)
+            //console.log('[getBranchPath] currentNodeParent.childNodes.length', currentNodeParent.childNodes.length)
+            /*console.log('[getBranchPath] currentNodeParent.childNodes', Array.from(currentNodeParent.childNodes)
+                .map(n => `${n.nodeName} - ${n.textContent}`)
+            )*/
+
+            const index = Array.from(currentNodeParent.childNodes).indexOf(currentNode)
+            //console.log('[getBranchPath] indexOf', index)
+            if(index === -1){
+                throw new Error(`Could not find currentNode in currentNodeParent's childNodes`)
+            }
+            pathFromLeafToBase.push(index)
+            //console.log('[getBranchPath] currentNodeParent and index', currentNodeParent.nodeName, index)
+
+            if(currentNodeParent === this.#ancestors[0]){
+                break; // path is fnished
+            }
+            else{
+                currentNode = currentNodeParent
+                currentNodeParent = currentNode.parentNode
+            }
+        }
+
+        //@ts-expect-error ES2023
+        return pathFromLeafToBase.toReversed()
+    }
+
 }
 
 
@@ -111,44 +153,48 @@ class TemplateBlock{
     /** @type {Element | Document | DocumentFragment} */
     #commonAncestor;
     /** @type {TemplateDOMBranch} */
-    #startBranch;
+    startBranch;
     /** @type {TemplateDOMBranch} */
-    #endBranch;
+    endBranch;
 
     /** @type {Node[]} */
     #middleContent;
 
     /**
      * 
-     * @param {Node} startMarkerNode 
-     * @param {Node} endMarkerNode 
+     * @param {Node} startNode 
+     * @param {Node} endNode 
      */
-    constructor(startMarkerNode, endMarkerNode){
+    constructor(startNode, endNode){
         // @ts-expect-error xmldom.Node
-        this.#commonAncestor = findCommonAncestor(startMarkerNode, endMarkerNode)
+        this.#commonAncestor = findCommonAncestor(startNode, endNode)
 
-        this.#startBranch = new TemplateDOMBranch(this.#commonAncestor, startMarkerNode)
-        this.#endBranch = new TemplateDOMBranch(this.#commonAncestor, endMarkerNode)
+        this.startBranch = new TemplateDOMBranch(this.#commonAncestor, startNode)
+        this.endBranch = new TemplateDOMBranch(this.#commonAncestor, endNode)
 
         this.#middleContent = []
 
-        let content = this.#startBranch.at(1).nextSibling
-        while(content && content !== this.#endBranch.at(1)){
+        let content = this.startBranch.at(1).nextSibling
+        while(content && content !== this.endBranch.at(1)){
             this.#middleContent.push(content)
             content = content.nextSibling
         }
 
-        //console.log('TemplateBlock')
-        //console.log('startBranch', this.#startBranch.at(1).textContent)
-        //console.log('middleContent', this.#middleContent.map(n => n.textContent).join(''))
-        //console.log('endBranch', this.#endBranch.at(1).textContent)
+        console.log('\n== TemplateBlock ==')
+        console.log('startBranch', this.startBranch.at(1).textContent)
+        console.log('middleContent', this.#middleContent.map(n => n.textContent).join(''))
+        console.log('endBranch\n', this.endBranch.at(1).textContent)
+        console.log('common ancestor', this.#commonAncestor.nodeName)
     }
 
     removeMarkersAndEmptyAncestors(){
+        console.log('[removeMarkersAndEmptyAncestors]', this.#commonAncestor.textContent)
         //console.log('removeMarkersAndEmptyAncestors startBranch')
-        this.#startBranch.removeLeafAndEmptyAncestors()
+        this.startBranch.removeLeafAndEmptyAncestors()
         //console.log('removeMarkersAndEmptyAncestors endBranch')
-        this.#endBranch.removeLeafAndEmptyAncestors()
+        this.endBranch.removeLeafAndEmptyAncestors()
+
+        console.log('[removeMarkersAndEmptyAncestors] after', this.#commonAncestor.textContent)
     }
 
     /**
@@ -156,30 +202,123 @@ class TemplateBlock{
      * @param {Compartment} compartement 
      */
     fillBlockContentTemplate(compartement){
-        const startChild = this.#startBranch.at(1)
-        if(startChild){
+        console.log('[fillBlockContentTemplate] start')
+
+        const startChild = this.startBranch.at(1)
+        if(startChild /*&& startChild !== */){
+            console.log('[fillBlockContentTemplate] startChild', startChild.nodeName, startChild.textContent)
             fillOdtElementTemplate(startChild, compartement)
         }
+        console.log('[fillBlockContentTemplate] after startChild')
 
         for(const content of this.#middleContent){
             fillOdtElementTemplate(content, compartement)
         }
+        console.log('[fillBlockContentTemplate] after middleContent')
 
-        const endChild = this.#endBranch.at(1)
+        const endChild = this.endBranch.at(1)
         if(endChild){
             fillOdtElementTemplate(endChild, compartement)
         }
+        console.log('[fillBlockContentTemplate] after endChild')
+
+        console.log('[fillBlockContentTemplate] end')
     }
 
     removeContent(){
-        this.#startBranch.removeRightContent(2)
+        this.startBranch.removeRightContent(2)
 
         for(const content of this.#middleContent){
             content.parentNode.removeChild(content)
         }
 
-        this.#endBranch.removeLeftContent(2)
+        this.endBranch.removeLeftContent(2)
     }
+
+    
+
+    /**
+     * @returns {TemplateBlock}
+     */
+    cloneAndAppendAfter(){
+        console.log('[cloneAndAppendAfter]')
+        const clonedPieces = []
+
+        let startBranchClone;
+        let endBranchClone;
+
+        for(const sibling of [this.startBranch.at(1), ...this.#middleContent, this.endBranch.at(1)]){
+            if(sibling){
+                const siblingClone = sibling.cloneNode(true)
+                clonedPieces.push(siblingClone)
+                
+                if(sibling === this.startBranch.at(1))
+                    startBranchClone = siblingClone
+                
+                if(sibling === this.endBranch.at(1))
+                    endBranchClone = siblingClone
+                
+            }
+        }
+
+        let startChildPreviousSiblingsCount = 0
+        let previousSibling = this.startBranch.at(1).previousSibling
+        while(previousSibling){
+            startChildPreviousSiblingsCount = startChildPreviousSiblingsCount + 1
+            previousSibling = previousSibling.previousSibling
+        }
+
+        const startBranchPathFromBaseToLeaf = this.startBranch.getBranchPath().slice(1)
+        const endBranchPathFromBaseToLeaf = this.endBranch.getBranchPath().slice(1)
+
+        
+        //console.log('startBranchClone', !!startBranchClone)
+        //console.log('startBranchPathFromBaseToLeaf', startBranchPathFromBaseToLeaf)
+
+        let startLeafCloneNode
+        {
+            let node = startBranchClone
+            for(let pathIndex of startBranchPathFromBaseToLeaf){
+                //console.log('[startLeafCloneNode] node.childNodes.length', node.childNodes.length)
+                //console.log('[startLeafCloneNode] pathIndex', pathIndex)
+
+                node = node.childNodes[pathIndex]
+            }
+            startLeafCloneNode = node
+        }
+
+        //console.log('endBranchClone', !!endBranchClone)
+        //console.log('endBranchPathFromBaseToLeaf', endBranchPathFromBaseToLeaf)
+
+        let endLeafCloneNode
+        {
+            let node = endBranchClone
+            for(let pathIndex of endBranchPathFromBaseToLeaf){
+
+                //console.log('[endLeafCloneNode] node.childNodes.length', node.childNodes.length)
+                //console.log('[endLeafCloneNode] pathIndex', pathIndex)
+
+                node = node.childNodes[pathIndex]
+            }
+            endLeafCloneNode = node
+        }
+
+        let insertBeforePoint = this.endBranch.at(1) && this.endBranch.at(1).nextSibling
+
+        if(insertBeforePoint){
+            for(const node of clonedPieces){
+                this.#commonAncestor.insertBefore(node, insertBeforePoint)
+            }
+        }
+        else{
+            for(const node of clonedPieces){
+                this.#commonAncestor.appendChild(node)
+            }
+        }
+
+        return new TemplateBlock(startLeafCloneNode, endLeafCloneNode)
+    }
+
 }
 
 
@@ -245,191 +384,6 @@ function findPlacesToFillInString(str, compartment) {
 
 }
 
-
-/**
- * Content between blockStartNode and blockEndNode is extracted to a documentFragment
- * The original document is modified because nodes are removed from it to be part of the returned documentFragment
- * 
- * startChild and endChild are ancestors of, respectively, blockStartNode and blockEndNode
- * and startChild.parentNode === endChild.parentNode
- * 
- * @precondition blockStartNode needs to be before blockEndNode in document order
- * 
- * @param {Node} blockStartNode 
- * @param {Node} blockEndNode 
- * @returns {{removeMarkers: () => void, insertContent: (n : Node) => void, content: DocumentFragment}}
- */
-function extractBlockContent(blockStartNode, blockEndNode) {
-    //console.log('[extractBlockContent] blockStartNode', blockStartNode.textContent)
-    //console.log('[extractBlockContent] blockEndNode', blockEndNode.textContent)
-
-    // find common ancestor of blockStartNode and blockEndNode
-    let commonAncestor
-
-    let startAncestor = blockStartNode
-    let endAncestor = blockEndNode
-
-    // ancestries in order of deepest first, closest to root last
-    const startAncestry = new Set([startAncestor])
-    const endAncestry = new Set([endAncestor])
-
-    while(!startAncestry.has(endAncestor) && !endAncestry.has(startAncestor)) {
-        if(startAncestor.parentNode) {
-            startAncestor = startAncestor.parentNode
-            startAncestry.add(startAncestor)
-        }
-        if(endAncestor.parentNode) {
-            endAncestor = endAncestor.parentNode
-            endAncestry.add(endAncestor)
-        }
-    }
-
-    if(startAncestry.has(endAncestor)) {
-        commonAncestor = endAncestor
-    }
-    else {
-        commonAncestor = startAncestor
-    }
-
-    //console.log('extractBlockContent', commonAncestor.textContent)
-
-    const startAncestryToCommonAncestor = [...startAncestry].slice(0, [...startAncestry].indexOf(commonAncestor))
-    const endAncestryToCommonAncestor = [...endAncestry].slice(0, [...endAncestry].indexOf(commonAncestor))
-
-    // direct children of commonAncestor in the branch or blockStartNode and blockEndNode respectively
-    const startChild = startAncestryToCommonAncestor.at(-1)
-    const endChild = endAncestryToCommonAncestor.at(-1)
-
-    //console.log('[extractBlockContent] startChild', startChild.childNodes.length, startChild.textContent)
-    //console.log('[extractBlockContent] endChild', endChild.childNodes.length,endChild.textContent)
-
-    // Extract DOM content in a documentFragment
-    /** @type {DocumentFragment} */
-    const contentFragment = blockStartNode.ownerDocument.createDocumentFragment()
-
-    /** @type {Element[]} */
-    const blockContent = []
-
-    // get start branch "right" content
-    for(const startAncestor of startAncestryToCommonAncestor){
-        if(startAncestor === startChild)
-            break;
-        
-        let sibling = startAncestor.nextSibling
-
-        while(sibling) {
-            blockContent.push(sibling)
-            sibling = sibling.nextSibling;
-        }
-    }
-
-
-    let sibling = startChild.nextSibling
-
-    while(sibling !== endChild) {
-        blockContent.push(sibling)
-        sibling = sibling.nextSibling;
-    }
-
-
-    // get end branch "left" content
-    for(const endAncestor of [...endAncestryToCommonAncestor].reverse()){
-        if(endAncestor === endChild)
-            continue; // already taken care of
-        
-        let sibling = endAncestor.previousSibling
-
-        const reversedBlockContentContribution = []
-
-        while(sibling) {
-            reversedBlockContentContribution.push(sibling)
-            sibling = sibling.previousSibling;
-        }
-
-        const blockContentContribution = reversedBlockContentContribution.reverse()
-
-        blockContent.push(...blockContentContribution)
-
-        if(endAncestor === blockEndNode)
-            break;
-    }
-    
-
-    //console.log('blockContent', blockContent.map(n => n.textContent))
-
-
-    for(const sibling of blockContent) {
-        sibling.parentNode?.removeChild(sibling)
-        contentFragment.appendChild(sibling)
-    }
-
-    //console.log('extractBlockContent contentFragment', contentFragment.textContent)
-
-    let insertionParent;
-
-    if(startAncestryToCommonAncestor.length >= endAncestryToCommonAncestor.length){
-        insertionParent = blockStartNode.parentNode
-    }
-    else{
-        insertionParent = blockEndNode.parentNode
-    }
-
-    let insertionBeforeNodeCandidates
-    if(blockEndNode.nextSibling){
-        insertionBeforeNodeCandidates = [blockEndNode.nextSibling]
-        while(insertionBeforeNodeCandidates.at(-1).nextSibling){
-            insertionBeforeNodeCandidates.push(insertionBeforeNodeCandidates.at(-1).nextSibling)
-        }
-    }
-
-    /** 
-     * @param {Node} content
-     */
-    function insertContent(content){
-        //console.log('insertContent', node.textContent, insertionBeforeNodeCandidates.map(n => `${n.nodeName} - ${n.textContent}`))
-        let insertionBeforeNode
-
-        if(insertionBeforeNodeCandidates){
-            insertionBeforeNode = insertionBeforeNodeCandidates.find(node => node.parentNode === insertionParent)
-        }
-
-        console.log('insertContent insertionBeforeNode', insertionBeforeNode && insertionBeforeNode.textContent)
-
-
-        if(insertionBeforeNode){
-            insertionParent.insertBefore(content, insertionBeforeNode)
-        }
-        else{
-            console.log('insertionParent', insertionParent.nodeName)
-            console.log('insertionParent content before append', insertionParent.textContent)
-            //console.log('insertionParent owner doc', insertionParent.ownerDocument)
-            
-            insertionParent.appendChild(content)
-            console.log('insertionParent content after append', insertionParent.textContent)
-        }
-    }
-
-    console.log('contentFragment', 
-        contentFragment.childNodes.length, 
-        contentFragment.childNodes[0].nodeName,
-        contentFragment.textContent
-    )
-
-    return {
-        removeMarkers(){
-            for(const marker of [blockStartNode, blockEndNode]){
-                console.log('removing marker', marker.nodeName, marker.textContent)
-
-                try{
-                    marker.parentNode.removeChild(marker)
-                }
-                catch(e){}
-            }  
-        },
-        insertContent,
-        content: contentFragment
-    }
-}
 
 
 
@@ -500,104 +454,60 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 
     const docEl = startNode.ownerDocument.documentElement
 
-    const {removeMarkers, insertContent, content: repeatedFragment} = extractBlockContent(startNode, endNode)
+    const repeatedTemplateBlock = new TemplateBlock(startNode, endNode)
 
     // Find the iterable in the data
-    // PPP eventually, evaluate the expression as a JS expression
     let iterable = compartment.evaluate(iterableExpression)
     if(!iterable || typeof iterable[Symbol.iterator] !== 'function') {
         // when there is no iterable, silently replace with empty array
         iterable = []
     }
 
-    let firstItemFirstChild
-    let lastItemLastChild
+    // convert to array to know the size and know which element is last
+    if(!Array.isArray(iterable))
+        iterable = [...iterable]
 
-    // store before-text in startNodePreviousSiblings
-    const startNodePreviousSiblings = []
-    let startNodePreviousSibling = startNode.previousSibling
-    while(startNodePreviousSibling){
-        startNodePreviousSiblings.push(startNodePreviousSibling)
-        startNodePreviousSibling = startNodePreviousSibling.previousSibling
+
+    if(iterable.length === 0){
+        repeatedTemplateBlock.removeMarkersAndEmptyAncestors()
+        repeatedTemplateBlock.removeContent()
     }
+    else{
+        let nextTemplateBlock = repeatedTemplateBlock
 
-    // set the array back to tree order
-    startNodePreviousSiblings.reverse()
+        iterable.forEach((item, i) => {
+            const firstItem = i === 0
+            const lastItem = i === iterable.length - 1
+            let currentTemplateBlock = nextTemplateBlock;
+
+            console.log('currentTemplateBlock', currentTemplateBlock.startBranch.at(0).textContent)
+
+            if(!lastItem){
+                nextTemplateBlock = currentTemplateBlock.cloneAndAppendAfter()
+            }
+
+            let insideCompartment = new Compartment({
+                globals: Object.assign({}, compartment.globalThis, {[itemExpression]: item}),
+                __options__: true
+            })
+
+            currentTemplateBlock.removeMarkersAndEmptyAncestors()
+            console.log('recursive call to fillBlockContentTemplate')
 
 
-    // store after-text in endNodeNextSiblings
-    const endNodeNextSiblings = []
-    let endNodeNextSibling = endNode.nextSibling
-    while(endNodeNextSibling){
-        endNodeNextSiblings.push(endNodeNextSibling)
-        endNodeNextSibling = endNodeNextSibling.nextSibling
-    }
+            currentTemplateBlock.fillBlockContentTemplate(insideCompartment)
 
-    // create each loop result
-    // using a for-of loop to accept all iterable values
-    for(const item of iterable) {
 
-        /** @type {DocumentFragment} */
-        // @ts-ignore
-        const itemFragment = repeatedFragment.cloneNode(true)
+            if(!firstItem){
+                currentTemplateBlock.startBranch.removeLeftContent()
+            }
+            if(!lastItem){
+                currentTemplateBlock.endBranch.removeRightContent()
+            }
 
-        let insideCompartment = new Compartment({
-            globals: Object.assign({}, compartment.globalThis, {[itemExpression]: item}),
-            __options__: true
         })
-
-        // recursive call to fillTemplatedOdtElement on itemFragment
-        fillOdtElementTemplate(
-            itemFragment,
-            insideCompartment
-        )
-
-        console.log('itemFragment', itemFragment.textContent)
-
-
-        if(!firstItemFirstChild){
-            firstItemFirstChild = itemFragment.firstChild
-        }
-
-        // eventually, will be set to the last item's last child
-        lastItemLastChild = itemFragment.lastChild
-
-        insertContent(itemFragment)
-
-        console.log('doc', docEl.textContent)
     }
 
-    if(startNodePreviousSiblings.length >= 1){
-        let firstItemFirstestDescendant = firstItemFirstChild
-        while(firstItemFirstestDescendant?.firstChild){
-            firstItemFirstestDescendant = firstItemFirstestDescendant.firstChild
-        }
-
-        for(const beforeFirstNodeElement of startNodePreviousSiblings){
-            firstItemFirstestDescendant?.parentNode?.insertBefore(beforeFirstNodeElement, firstItemFirstestDescendant)
-        }
-    }
-
-    console.log('doc after add before-text if any', docEl.textContent)
-
-
-    if(endNodeNextSiblings.length >= 1){
-        let lastItemLatestDescendant = lastItemLastChild
-        while(lastItemLatestDescendant?.lastChild){
-            lastItemLatestDescendant = lastItemLatestDescendant.lastChild
-        }
-
-        for(const afterEndNodeElement of endNodeNextSiblings){
-            console.log('doc in for-of', docEl.textContent)
-            console.log('afterEndNodeElement', afterEndNodeElement.textContent)
-            lastItemLatestDescendant?.parentNode?.appendChild(afterEndNodeElement)
-        }
-    }
-
-    console.log('doc before removeMarkers', docEl.textContent)
-    // remove block marker elements
-    removeMarkers()
-    console.log('doc after removeMarkers', docEl.textContent)
 }
 
 

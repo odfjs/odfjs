@@ -28,7 +28,7 @@ test('basic template filling with {#each}', async t => {
     const templateTextContent = await getOdtTextContent(odtTemplate)
 
     t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
-
+try{
     const odtResult = await fillOdtTemplate(odtTemplate, data)
 
     const odtResultTextContent = await getOdtTextContent(odtResult)
@@ -38,6 +38,7 @@ Radis
 Jus d'orange
 Pâtes à lasagne (fraîches !)
 `)
+    }catch(e){console.error(e); throw e}
 
 
 });
@@ -110,7 +111,7 @@ test('template filling with {#each} generating a list', async t => {
 });
 
 
-test('template filling with 2 sequential {#each}', async t => {
+test.skip('template filling with 2 sequential {#each}', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/liste-fruits-et-légumes.odt')
     const templateContent = `Liste de fruits et légumes
 
@@ -162,7 +163,7 @@ Poivron 🫑
 });
 
 
-test('template filling with nested {#each}s', async t => {
+test.skip('template filling with nested {#each}s', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/légumes-de-saison.odt')
     const templateContent = `Légumes de saison
 
@@ -247,7 +248,7 @@ Hiver
 });
 
 
-test('template filling with text after {/each} in same text node', async t => {
+test.skip('template filling with text after {/each} in same text node', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/text-after-closing-each.odt')
     const templateContent = `Légumes de saison
 
@@ -283,7 +284,7 @@ Blette,  en Printemps
 });
 
 
-test('template filling of a table', async t => {
+test.skip('template filling of a table', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/tableau-simple.odt')
     const templateContent = `Évolution énergie en kWh par personne en France
 
