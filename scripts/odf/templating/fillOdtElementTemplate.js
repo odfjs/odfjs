@@ -68,7 +68,7 @@ class TemplateDOMBranch{
             this.#leafNode = nextLeaf
         }
 
-        this.#ancestors = getAncestors(this.#branchBaseNode, this.#leafNode).reverse()
+        this.#ancestors = getAncestors(this.#leafNode, this.#branchBaseNode).reverse()
     }
 
     /**
@@ -76,7 +76,11 @@ class TemplateDOMBranch{
      * @param {number} [startIndex]
      */
     removeRightContent(startIndex = 0){
+        console.log('[removeRightContent]', startIndex, this.#ancestors.slice(startIndex).length)
+
         for(const branchNode of this.#ancestors.slice(startIndex)){
+            console.log('[removeRightContent]', branchNode.nodeType, branchNode.nodeName)
+
             let toRemove = branchNode.nextSibling
 
             while(toRemove){
@@ -146,6 +150,16 @@ class TemplateDOMBranch{
         return pathFromLeafToBase.toReversed()
     }
 
+    logBranch(message){
+        console.group('[TemplateDOMBranch] Showing branch')
+        console.log(message)
+        for(const node of this.#ancestors){
+            console.log('branch node', node.nodeType, node.nodeName)
+        }
+        console.groupEnd()
+    }
+
+
 }
 
 
@@ -169,8 +183,12 @@ class TemplateBlock{
         // @ts-expect-error xmldom.Node
         this.#commonAncestor = findCommonAncestor(startNode, endNode)
 
+        console.log('create start branch')
         this.startBranch = new TemplateDOMBranch(this.#commonAncestor, startNode)
+        console.log('create end branch')
         this.endBranch = new TemplateDOMBranch(this.#commonAncestor, endNode)
+
+
 
         this.#middleContent = []
 
@@ -181,20 +199,17 @@ class TemplateBlock{
         }
 
         console.log('\n== TemplateBlock ==')
-        console.log('startBranch', this.startBranch.at(1).textContent)
+        console.log('startBranch', this.startBranch.at(1).nodeName, this.startBranch.at(1).textContent)
         console.log('middleContent', this.#middleContent.map(n => n.textContent).join(''))
-        console.log('endBranch\n', this.endBranch.at(1).textContent)
-        console.log('common ancestor', this.#commonAncestor.nodeName)
+        console.log('endBranch', this.startBranch.at(1).nodeName, this.endBranch.at(1).textContent)
+        console.log('common ancestor', this.#commonAncestor.nodeName, '\n')
     }
 
     removeMarkersAndEmptyAncestors(){
-        console.log('[removeMarkersAndEmptyAncestors]', this.#commonAncestor.textContent)
-        //console.log('removeMarkersAndEmptyAncestors startBranch')
+        //console.log('[removeMarkersAndEmptyAncestors]', this.#commonAncestor.textContent)
         this.startBranch.removeLeafAndEmptyAncestors()
-        //console.log('removeMarkersAndEmptyAncestors endBranch')
         this.endBranch.removeLeafAndEmptyAncestors()
-
-        console.log('[removeMarkersAndEmptyAncestors] after', this.#commonAncestor.textContent)
+        //console.log('[removeMarkersAndEmptyAncestors] after', this.#commonAncestor.textContent)
     }
 
     /**
@@ -217,7 +232,11 @@ class TemplateBlock{
         console.log('[fillBlockContentTemplate] after middleContent')
 
         const endChild = this.endBranch.at(1)
+        console.log('fillBlockContentTemplate] [endBranch]')
+        this.endBranch.logBranch('endBranch')
+
         if(endChild){
+            console.log('[fillBlockContentTemplate] endChild', endChild.nodeName, endChild.textContent)
             fillOdtElementTemplate(endChild, compartement)
         }
         console.log('[fillBlockContentTemplate] after endChild')
@@ -241,7 +260,7 @@ class TemplateBlock{
      * @returns {TemplateBlock}
      */
     cloneAndAppendAfter(){
-        console.log('[cloneAndAppendAfter]')
+        //console.log('[cloneAndAppendAfter]')
         const clonedPieces = []
 
         let startBranchClone;
@@ -453,6 +472,7 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
     //console.log('fillEachBlock', iterableExpression, itemExpression)
 
     const docEl = startNode.ownerDocument.documentElement
+    console.log('[fillEachBlock] docEl', docEl.textContent)
 
     const repeatedTemplateBlock = new TemplateBlock(startNode, endNode)
 
@@ -476,6 +496,7 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
         let nextTemplateBlock = repeatedTemplateBlock
 
         iterable.forEach((item, i) => {
+            console.log('[fillEachBlock] loop i', i, docEl.textContent)
             const firstItem = i === 0
             const lastItem = i === iterable.length - 1
             let currentTemplateBlock = nextTemplateBlock;
@@ -491,19 +512,25 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
                 __options__: true
             })
 
+            if(!firstItem){
+                currentTemplateBlock.startBranch.removeLeftContent(2)
+            }
+            if(!lastItem){
+                console.log('[fillEachBlock] removeRightContent')
+                currentTemplateBlock.endBranch.removeRightContent(2)
+            }
+
+            console.log('[fillEachBlock] docEl i before removeMarkers', i, docEl.textContent)
             currentTemplateBlock.removeMarkersAndEmptyAncestors()
-            console.log('recursive call to fillBlockContentTemplate')
+            console.log('[fillEachBlock] docEl i after removeMarkers', i, docEl.textContent)
 
-
+            console.log('\nrecursive call to fillBlockContentTemplate')
             currentTemplateBlock.fillBlockContentTemplate(insideCompartment)
 
 
-            if(!firstItem){
-                currentTemplateBlock.startBranch.removeLeftContent()
-            }
-            if(!lastItem){
-                currentTemplateBlock.endBranch.removeRightContent()
-            }
+
+
+            console.log('[fillEachBlock] docEl i after remove contents', i, docEl.textContent)
 
         })
     }
@@ -521,9 +548,9 @@ const EACH = eachStartMarkerRegex.source
  * @returns {void}
  */
 export default function fillOdtElementTemplate(rootElement, compartment) {
-    //console.log('fillTemplatedOdtElement', rootElement.nodeType, rootElement.nodeName, rootElement.textContent)
-    //console.log('fillTemplatedOdtElement', rootElement.childNodes[0].childNodes.length)
-
+    console.log('[fillTemplatedOdtElement]', rootElement.nodeType, rootElement.nodeName, rootElement.textContent)
+    console.log('[fillTemplatedOdtElement]', rootElement.documentElement && rootElement.documentElement.textContent)
+    
     let currentlyOpenBlocks = []
 
     /** @type {Node | undefined} */

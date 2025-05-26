@@ -111,7 +111,7 @@ test('template filling with {#each} generating a list', async t => {
 });
 
 
-test.skip('template filling with 2 sequential {#each}', async t => {
+test('template filling with 2 sequential {#each}', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/liste-fruits-et-légumes.odt')
     const templateContent = `Liste de fruits et légumes
 
@@ -163,7 +163,7 @@ Poivron 🫑
 });
 
 
-test.skip('template filling with nested {#each}s', async t => {
+test('template filling with nested {#each}s', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/légumes-de-saison.odt')
     const templateContent = `Légumes de saison
 
@@ -248,7 +248,7 @@ Hiver
 });
 
 
-test.skip('template filling with text after {/each} in same text node', async t => {
+test('template filling with text after {/each} in same text node', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/text-after-closing-each.odt')
     const templateContent = `Légumes de saison
 
@@ -278,13 +278,14 @@ test.skip('template filling with text after {/each} in same text node', async t 
 
 Asperge, 
 Betterave, 
-Blette,  en Printemps
+Blette, 
+ en Printemps
 `)
 
 });
 
 
-test.skip('template filling of a table', async t => {
+test('template filling of a table', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/tableau-simple.odt')
     const templateContent = `Évolution énergie en kWh par personne en France
 
@@ -328,22 +329,16 @@ Année
 
 Année
 Énergie par personne
-
 1970
 36252.637
-
 1980
 43328.78
-
 1990
 46971.94
-
 2000
 53147.277
-
 2010
 48062.32
-
 2020
 37859.246
 `.trim())

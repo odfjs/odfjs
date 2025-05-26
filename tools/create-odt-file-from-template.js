@@ -12,17 +12,14 @@ const data = {
 }
 */
 
-
-
-
-const templatePath = join(import.meta.dirname, '../tests/fixtures/enum-courses.odt')
+/*const templatePath = join(import.meta.dirname, '../tests/fixtures/enum-courses.odt')
 const data = {
     listeCourses : [
         'Radis',
         `Jus d'orange`,
         'Pâtes à lasagne (fraîches !)'
     ]
-}
+}*/
 
 /*
 const templatePath = join(import.meta.dirname, '../tests/fixtures/liste-fruits-et-légumes.odt')
@@ -105,6 +102,16 @@ const data = {
 const templatePath = join(import.meta.dirname, '../tests/fixtures/partially-formatted-variable.odt')
 const data = {nombre : 37}
 */  
+
+const templatePath = join(import.meta.dirname, '../tests/fixtures/text-after-closing-each.odt')
+const data = {
+    saison: 'Printemps',
+    légumes: [
+        'Asperge',
+        'Betterave',
+        'Blette'
+    ]
+}
 
 
 
