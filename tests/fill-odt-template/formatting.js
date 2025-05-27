@@ -157,10 +157,33 @@ test('template filling - formatted-start-each-single-paragraph', async t => {
     const odtResult = await fillOdtTemplate(odtTemplate, data)
 
     const odtResultTextContent = await getOdtTextContent(odtResult)
-    t.deepEqual(odtResultTextContent.trim(), `
+    t.deepEqual(odtResultTextContent, `
+
 37
 38
 39
+`)
+
+});
+
+
+test('template filling - formatted ghost if', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/reducing.odt')
+    const templateContent = `
+    Utilisation de sources lumineuses : {#if scientifique.source_lumineuses}Oui{:else}Non{/if}
+`
+
+    const data = {scientifique: {source_lumineuses: true}}
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)    
+    t.deepEqual(templateTextContent.trim(), templateContent.trim(), 'reconnaissance du template')
+    let odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent.trim(), `
+ Utilisation de sources lumineuses : Oui
 `.trim())
 
 });

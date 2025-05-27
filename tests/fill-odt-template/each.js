@@ -28,7 +28,7 @@ test('basic template filling with {#each}', async t => {
     const templateTextContent = await getOdtTextContent(odtTemplate)
 
     t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
-
+try{
     const odtResult = await fillOdtTemplate(odtTemplate, data)
 
     const odtResultTextContent = await getOdtTextContent(odtResult)
@@ -38,6 +38,7 @@ Radis
 Jus d'orange
 Pâtes à lasagne (fraîches !)
 `)
+    }catch(e){console.error(e); throw e}
 
 
 });
@@ -277,7 +278,8 @@ test('template filling with text after {/each} in same text node', async t => {
 
 Asperge, 
 Betterave, 
-Blette,  en Printemps
+Blette, 
+ en Printemps
 `)
 
 });
@@ -327,22 +329,16 @@ Année
 
 Année
 Énergie par personne
-
 1970
 36252.637
-
 1980
 43328.78
-
 1990
 46971.94
-
 2000
 53147.277
-
 2010
 48062.32
-
 2020
 37859.246
 `.trim())
