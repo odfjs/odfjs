@@ -207,9 +207,9 @@ class TemplateBlock{
         }
 
         //console.group('\n== TemplateBlock ==')
-        //console.log('startBranch', this.startBranch.at(1).nodeName, this.startBranch.at(1).textContent)
+        //this.startBranch.logBranch('startBranch')
         //console.log('middleContent', this.#middleContent.map(n => n.textContent).join(''))
-        //console.log('endBranch', this.startBranch.at(1).nodeName, this.endBranch.at(1).textContent)
+        //this.endBranch.logBranch('endBranch')
         //console.log('common ancestor', this.#commonAncestor.nodeName, '\n')
         //console.groupEnd()
     }
@@ -425,6 +425,8 @@ function findPlacesToFillInString(str, compartment) {
  * @param {Compartment} compartment 
  */
 function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment) {
+    //const docEl = ifOpeningMarkerNode.ownerDocument.documentElement
+    
     const conditionValue = compartment.evaluate(ifBlockConditionExpression)
 
     /** @type {TemplateBlock | undefined} */
@@ -445,21 +447,26 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
         thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifClosingMarkerNode)
     }
 
-    thenTemplateBlock.removeMarkersAndEmptyAncestors()
-    if(elseTemplateBlock){
-        elseTemplateBlock.removeMarkersAndEmptyAncestors()
-    }
-
-
     if(conditionValue) {
-        thenTemplateBlock.fillBlockContentTemplate(compartment)
-
         if(elseTemplateBlock){
             elseTemplateBlock.removeContent()
         }
+
+        thenTemplateBlock.removeMarkersAndEmptyAncestors()
+        if(elseTemplateBlock){
+            elseTemplateBlock.removeMarkersAndEmptyAncestors()
+        }
+
+        thenTemplateBlock.fillBlockContentTemplate(compartment)
     }
     else{
+        // remove content before removing markers so that right and left content are fully removed
         thenTemplateBlock.removeContent()
+        
+        thenTemplateBlock.removeMarkersAndEmptyAncestors()
+        if(elseTemplateBlock){
+            elseTemplateBlock.removeMarkersAndEmptyAncestors()
+        }
 
         if(elseTemplateBlock){
             elseTemplateBlock.fillBlockContentTemplate(compartment)
