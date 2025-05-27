@@ -168,7 +168,7 @@ test('template filling - formatted-start-each-single-paragraph', async t => {
 
 
 test('template filling - formatted ghost if', async t => {
-    const templatePath = join(import.meta.dirname, '../fixtures/reducing.odt')
+    const templatePath = join(import.meta.dirname, '../fixtures/ghost-if.odt')
     const templateContent = `
     Utilisation de sources lumineuses : {#if scientifique.source_lumineuses}Oui{:else}Non{/if}
 `
