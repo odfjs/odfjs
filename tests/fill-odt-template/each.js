@@ -344,3 +344,32 @@ Année
 `.trim())
 
 });
+
+
+test('nested each without common ancestor for inner each', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/nested-each-without-common-ancestor-for-inner-each.odt')
+    const templateContent = `{#each liste_espèces_par_impact as élément}
+{#each élément.liste_espèces as espèce}
+{/each}
+{/each}
+`
+
+	const data = {
+        liste_espèces_par_impact: [
+            {}
+        ]
+    }
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)
+
+    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
+
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent, ``)
+
+
+});
