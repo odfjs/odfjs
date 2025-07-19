@@ -344,3 +344,42 @@ Année
 `.trim())
 
 });
+
+
+test('Mysterious {#each} bug', async t => {
+    const templatePath = join(import.meta.dirname, '../fixtures/minimal-testcase-audrey.odt')
+    const templateContent = `{#each liste_espèces_par_impact as élément}
+{#each élément.liste_espèces as espèce}
+{/each}
+{/each}
+`
+
+	const data = {
+        liste_espèces_par_impact: [
+            {
+                "liste_espèces":[
+                    {
+                        "nomVernaculaire":"Phragmite aquatique",
+                        "nomScientifique":"Acrocephalus paludicola",
+                        "liste_impacts_quantifiés":["101-1000"]
+                    }
+                ],
+                "impact":"Destruction intentionnelle, capture ou perturbation intentionnelle de spécimens",
+                "liste_noms_impacts_quantifiés":["Nombre d'individus"]
+            }
+        ]
+    }
+
+    const odtTemplate = await getOdtTemplate(templatePath)
+
+    const templateTextContent = await getOdtTextContent(odtTemplate)
+
+    t.deepEqual(templateTextContent, templateContent, 'reconnaissance du template')
+
+    const odtResult = await fillOdtTemplate(odtTemplate, data)
+
+    const odtResultTextContent = await getOdtTextContent(odtResult)
+    t.deepEqual(odtResultTextContent, ``)
+
+
+});
