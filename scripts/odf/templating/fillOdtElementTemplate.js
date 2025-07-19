@@ -14,7 +14,7 @@ class TemplateDOMBranch{
     /** @type {Node} */
     #leafNode
 
-    // ancestors with this.#ancestors[0] === this.#startNode and this.#ancestors.at(-1) === this.#leafNode
+    // ancestors with this.#ancestors[0] === this.#branchBaseNode and this.#ancestors.at(-1) === this.#leafNode
     /** @type {Node[]} */
     #ancestors
 
@@ -235,9 +235,12 @@ class TemplateBlock{
         }
         //console.log('[fillBlockContentTemplate] after startChild')
 
-        for(const content of this.#middleContent){
-            fillOdtElementTemplate(content, compartement)
-        }
+        
+        // if content consists of several parts of an {#each}{/each}
+        // when arriving to the {/each}, it will be alone (and imbalanced)
+        // and will trigger an error
+        fillOdtElementTemplate(Array.from(this.#middleContent), compartement)
+
         //console.log('[fillBlockContentTemplate] after middleContent')
 
         const endChild = this.endBranch.at(1)
@@ -554,16 +557,24 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 const IF = ifStartMarkerRegex.source
 const EACH = eachStartMarkerRegex.source
 
+/** @typedef {Element | DocumentFragment | Document} RootElementArgument */
+
+
 /**
  * 
- * @param {Element | DocumentFragment | Document} rootElement 
+ * @param {RootElementArgument | RootElementArgument[]} rootElements
  * @param {Compartment} compartment 
  * @returns {void}
  */
-export default function fillOdtElementTemplate(rootElement, compartment) {
-    //console.log('[fillTemplatedOdtElement]', rootElement.nodeType, rootElement.nodeName, rootElement.textContent)
-    //console.log('[fillTemplatedOdtElement]', rootElement.documentElement && rootElement.documentElement.textContent)
+export default function fillOdtElementTemplate(rootElements, compartment) {
     
+    if(!Array.isArray(rootElements)){
+        rootElements = [rootElements]
+    }
+
+    //console.log('[fillTemplatedOdtElement]', rootElements.length, rootElements[0].nodeType, rootElements[0].nodeName, rootElements[0].textContent)
+    //console.log('[fillTemplatedOdtElement]', rootElement.documentElement && rootElement.documentElement.textContent)
+
     let currentlyOpenBlocks = []
 
     /** @type {Node | undefined} */
@@ -585,187 +596,197 @@ export default function fillOdtElementTemplate(rootElement, compartment) {
     // Traverse "in document order"
 
 
-    // @ts-ignore
-    traverse(rootElement, currentNode => {
-        //console.log('currentlyOpenBlocks', currentlyOpenBlocks)
-        
-        const insideAnOpenBlock = currentlyOpenBlocks.length >= 1
+    for(const rootElement of rootElements){
 
-        if(currentNode.nodeType === Node.TEXT_NODE) {
-            const text = currentNode.textContent || ''
+        // @ts-ignore
+        traverse(rootElement, currentNode => {
+            //console.log('currentlyOpenBlocks', currentlyOpenBlocks)
 
-            /**
-             * looking for {#each x as y}
-             */
-            const eachStartMatch = text.match(eachStartMarkerRegex);
+            const insideAnOpenBlock = currentlyOpenBlocks.length >= 1
 
-            if(eachStartMatch) {
-                //console.log('startMatch', startMatch)
+            if(currentNode.nodeType === Node.TEXT_NODE) {
+                const text = currentNode.textContent || ''
 
-                currentlyOpenBlocks.push(EACH)
+                /**
+                 * looking for {#each x as y}
+                 */
+                const eachStartMatch = text.match(eachStartMarkerRegex);
 
-                if(insideAnOpenBlock) {
-                    // do nothing 
-                }
-                else {
-                    let [_, _iterableExpression, _itemExpression] = eachStartMatch
+                if(eachStartMatch) {
+                    //console.log('startMatch', startMatch)
 
-                    eachBlockIterableExpression = _iterableExpression
-                    eachBlockItemExpression = _itemExpression
-                    eachOpeningMarkerNode = currentNode
-                }
-            }
+                    currentlyOpenBlocks.push(EACH)
 
-
-            /**
-             * Looking for {/each}
-             */
-            const isEachClosingBlock = text.includes(eachClosingMarker)
-
-            if(isEachClosingBlock) {
-
-                //console.log('isEachClosingBlock', isEachClosingBlock)
-
-                if(!eachOpeningMarkerNode)
-                    throw new Error(`{/each} found without corresponding opening {#each x as y}`)
-
-                if(currentlyOpenBlocks.at(-1) !== EACH)
-                    throw new Error(`{/each} found while the last opened block was not an opening {#each x as y}`)
-
-                if(currentlyOpenBlocks.length === 1) {
-                    eachClosingMarkerNode = currentNode
-
-                    // found an {#each} and its corresponding {/each}
-                    // execute replacement loop
-                    fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment)
-
-                    eachOpeningMarkerNode = undefined
-                    eachBlockIterableExpression = undefined
-                    eachBlockItemExpression = undefined
-                    eachClosingMarkerNode = undefined
-                }
-                else {
-                    // ignore because it will be treated as part of the outer {#each}
-                }
-
-                currentlyOpenBlocks.pop()
-            }
-
-
-            /**
-             * Looking for {#if ...}
-             */
-            const ifStartMatch = text.match(ifStartMarkerRegex);
-
-            if(ifStartMatch) {
-                currentlyOpenBlocks.push(IF)
-
-                if(insideAnOpenBlock) {
-                    // do nothing because the marker is too deep
-                }
-                else {
-                    let [_, _ifBlockConditionExpression] = ifStartMatch
-
-                    ifBlockConditionExpression = _ifBlockConditionExpression
-                    ifOpeningMarkerNode = currentNode
-                }
-            }
-
-
-            /**
-             * Looking for {:else}
-             */
-            const hasElseMarker = text.includes(elseMarker);
-
-            if(hasElseMarker) {
-                if(!insideAnOpenBlock)
-                    throw new Error('{:else} without a corresponding {#if}')
-
-                if(currentlyOpenBlocks.length === 1) {
-                    if(currentlyOpenBlocks[0] === IF) {
-                        ifElseMarkerNode = currentNode
+                    if(insideAnOpenBlock) {
+                        // do nothing 
                     }
-                    else
-                        throw new Error('{:else} inside an {#each} but without a corresponding {#if}')
+                    else {
+                        let [_, _iterableExpression, _itemExpression] = eachStartMatch
+
+                        eachBlockIterableExpression = _iterableExpression
+                        eachBlockItemExpression = _itemExpression
+                        eachOpeningMarkerNode = currentNode
+                    }
                 }
-                else {
-                    // do nothing because the marker is too deep
-                }
-            }
 
 
-            /**
-             * Looking for {/if}
-             */
-            const ifClosingMarker = text.includes(closingIfMarker);
+                /**
+                 * Looking for {/each}
+                 */
+                const isEachClosingBlock = text.includes(eachClosingMarker)
 
-            if(ifClosingMarker) {
-                if(!insideAnOpenBlock)
-                    throw new Error('{/if} without a corresponding {#if}')
+                if(isEachClosingBlock) {
 
-                if(currentlyOpenBlocks.length === 1) {
-                    if(currentlyOpenBlocks[0] === IF) {
-                        ifClosingMarkerNode = currentNode
+                    //console.log('isEachClosingBlock', isEachClosingBlock)
 
-                        // found an {#if} and its corresponding {/if}
+                    if(!eachOpeningMarkerNode){
+                        throw new Error(`{/each} found without corresponding opening {#each x as y}`)
+                    }
+
+                    if(currentlyOpenBlocks.at(-1) !== EACH)
+                        throw new Error(`{/each} found while the last opened block was not an opening {#each x as y}`)
+
+                    if(currentlyOpenBlocks.length === 1) {
+                        eachClosingMarkerNode = currentNode
+
+                        // found an {#each} and its corresponding {/each}
                         // execute replacement loop
-                        fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment)
+                        //console.log('start of fillEachBlock')
 
-                        ifOpeningMarkerNode = undefined
-                        ifElseMarkerNode = undefined
-                        ifClosingMarkerNode = undefined
-                        ifBlockConditionExpression = undefined
+                        fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment)
+
+                        //console.log('end of fillEachBlock')
+
+                        eachOpeningMarkerNode = undefined
+                        eachBlockIterableExpression = undefined
+                        eachBlockItemExpression = undefined
+                        eachClosingMarkerNode = undefined
                     }
-                    else
-                        throw new Error('{/if} inside an {#each} but without a corresponding {#if}')
+                    else {
+                        // ignore because it will be treated as part of the outer {#each}
+                    }
+
+                    //console.log('popping currentlyOpenBlocks')
+                    currentlyOpenBlocks.pop()
+                }
+
+
+                /**
+                 * Looking for {#if ...}
+                 */
+                const ifStartMatch = text.match(ifStartMarkerRegex);
+
+                if(ifStartMatch) {
+                    currentlyOpenBlocks.push(IF)
+
+                    if(insideAnOpenBlock) {
+                        // do nothing because the marker is too deep
+                    }
+                    else {
+                        let [_, _ifBlockConditionExpression] = ifStartMatch
+
+                        ifBlockConditionExpression = _ifBlockConditionExpression
+                        ifOpeningMarkerNode = currentNode
+                    }
+                }
+
+
+                /**
+                 * Looking for {:else}
+                 */
+                const hasElseMarker = text.includes(elseMarker);
+
+                if(hasElseMarker) {
+                    if(!insideAnOpenBlock)
+                        throw new Error('{:else} without a corresponding {#if}')
+
+                    if(currentlyOpenBlocks.length === 1) {
+                        if(currentlyOpenBlocks[0] === IF) {
+                            ifElseMarkerNode = currentNode
+                        }
+                        else
+                            throw new Error('{:else} inside an {#each} but without a corresponding {#if}')
+                    }
+                    else {
+                        // do nothing because the marker is too deep
+                    }
+                }
+
+
+                /**
+                 * Looking for {/if}
+                 */
+                const ifClosingMarker = text.includes(closingIfMarker);
+
+                if(ifClosingMarker) {
+                    if(!insideAnOpenBlock)
+                        throw new Error('{/if} without a corresponding {#if}')
+
+                    if(currentlyOpenBlocks.length === 1) {
+                        if(currentlyOpenBlocks[0] === IF) {
+                            ifClosingMarkerNode = currentNode
+
+                            // found an {#if} and its corresponding {/if}
+                            // execute replacement loop
+                            fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment)
+
+                            ifOpeningMarkerNode = undefined
+                            ifElseMarkerNode = undefined
+                            ifClosingMarkerNode = undefined
+                            ifBlockConditionExpression = undefined
+                        }
+                        else
+                            throw new Error('{/if} inside an {#each} but without a corresponding {#if}')
+                    }
+                    else {
+                        // do nothing because the marker is too deep
+                    }
+
+                    currentlyOpenBlocks.pop()
+                }
+
+
+                /**
+                 * Looking for variables for substitutions
+                 */
+                if(!insideAnOpenBlock) {
+                    // @ts-ignore
+                    if(currentNode.data) {
+                        // @ts-ignore
+                        const placesToFill = findPlacesToFillInString(currentNode.data, compartment)
+
+                        if(placesToFill) {
+                            const newText = placesToFill.fill()
+                            // @ts-ignore
+                            const newTextNode = currentNode.ownerDocument?.createTextNode(newText)
+                            // @ts-ignore
+                            currentNode.parentNode?.replaceChild(newTextNode, currentNode)
+                        }
+                    }
                 }
                 else {
-                    // do nothing because the marker is too deep
+                    // ignore because it will be treated as part of the outer {#each} block
                 }
-
-                currentlyOpenBlocks.pop()
             }
 
-
-            /**
-             * Looking for variables for substitutions
-             */
-            if(!insideAnOpenBlock) {
-                // @ts-ignore
-                if(currentNode.data) {
+            if(currentNode.nodeType === Node.ATTRIBUTE_NODE) {
+                // Looking for variables for substitutions
+                if(!insideAnOpenBlock) {
                     // @ts-ignore
-                    const placesToFill = findPlacesToFillInString(currentNode.data, compartment)
-
-                    if(placesToFill) {
-                        const newText = placesToFill.fill()
+                    if(currentNode.value) {
                         // @ts-ignore
-                        const newTextNode = currentNode.ownerDocument?.createTextNode(newText)
-                        // @ts-ignore
-                        currentNode.parentNode?.replaceChild(newTextNode, currentNode)
+                        const placesToFill = findPlacesToFillInString(currentNode.value, compartment)
+                        if(placesToFill) {
+                            // @ts-ignore
+                            currentNode.value = placesToFill.fill()
+                        }
                     }
                 }
-            }
-            else {
-                // ignore because it will be treated as part of the outer {#each} block
-            }
-        }
-
-        if(currentNode.nodeType === Node.ATTRIBUTE_NODE) {
-            // Looking for variables for substitutions
-            if(!insideAnOpenBlock) {
-                // @ts-ignore
-                if(currentNode.value) {
-                    // @ts-ignore
-                    const placesToFill = findPlacesToFillInString(currentNode.value, compartment)
-                    if(placesToFill) {
-                        // @ts-ignore
-                        currentNode.value = placesToFill.fill()
-                    }
+                else {
+                    // ignore because it will be treated as part of the {#each} block
                 }
             }
-            else {
-                // ignore because it will be treated as part of the {#each} block
-            }
-        }
-    })
+        })
+
+    }
 }
