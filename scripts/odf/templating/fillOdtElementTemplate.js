@@ -1,5 +1,5 @@
 import {traverse, Node, getAncestors, findCommonAncestor} from "../../DOMUtils.js";
-import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
+import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, imageMarkerRegex, variableRegex} from './markers.js'
 
 /**
  * @typedef TextPlaceToFill
@@ -554,6 +554,33 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 }
 
 
+/**
+ * @param {string} str
+ * @param {Compartement} compartment
+ * @returns {}
+ */
+function findImageMarker(str, compartment) {
+    const imageRexExp = new RegExp(imageMarkerRegex.source, 'g');
+    const match = imageRexExp.exec(str)
+
+    if (match===null){
+        return;
+    }
+
+    const expression = match[1]
+    const value = compartment.evaluate(expression)
+    
+    if (value instanceof ArrayBuffer) {
+        // TODO : 
+        //  - Rajouter un fichier image dans le odt avec le ArrayBuffer comme contenu (ou autre type)
+        //  - Rajouter un suffixe/titre (donc peut-être changer l'api pour que photo ça soit un objet qui contienne arraybuffer et d'autres choses)
+        //  - puis remplacer le texte par peut-être <draw:image et peut-être <draw:frame et peut être pas ici
+        return value
+    } else {
+        // TODO: throws an exception
+    }
+}
+
 const IF = ifStartMarkerRegex.source
 const EACH = eachStartMarkerRegex.source
 
@@ -761,6 +788,14 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
                             const newTextNode = currentNode.ownerDocument?.createTextNode(newText)
                             // @ts-ignore
                             currentNode.parentNode?.replaceChild(newTextNode, currentNode)
+                        } else {
+                            const imageMarker = findImageMarker(currentNode.data, compartment)
+                            
+                            if (imageMarker){
+                                console.log({imageMarker}, "dans le if")
+                            }
+                            
+
                         }
                     }
                 }
