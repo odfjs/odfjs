@@ -59,7 +59,7 @@ test('insert 2 images', async t => {
     const photo1Buffer = (await readFile(photo1Path)).buffer
     const photo2Buffer = (await readFile(photo2Path)).buffer
 
-    const photos = [photo1Buffer, photo2Buffer]
+    const photos = [{content: photo1Buffer, fileName: 'pitchou-1.png', mediaType: 'image/png'}, {content: photo2Buffer, fileName: 'pitchou-2.png', mediaType: 'image/png'}]
 
     const data = {
         title: 'Titre de mon projet',

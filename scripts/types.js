@@ -10,4 +10,12 @@
 
 /** @typedef {string} SheetName */
 
+/** 
+ * @typedef OdfjsImage  
+ * @prop {ArrayBuffer} content
+ * @prop {string} fileName
+ * @prop {string} mediaType
+ * 
+*/
+
 export {}

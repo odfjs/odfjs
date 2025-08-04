@@ -1,5 +1,7 @@
 import {traverse, Node, getAncestors, findCommonAncestor} from "../../DOMUtils.js";
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, imageMarkerRegex, variableRegex} from './markers.js'
+import {isOdfjsImage} from "../../shared.js"
+/** @import {OdfjsImage} from "../../types.js" */
 
 /**
  * @typedef TextPlaceToFill
@@ -557,7 +559,7 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 /**
  * @param {string} str
  * @param {Compartement} compartment
- * @returns {}
+ * @returns { {expression: string, odfjsImage: OdfjsImage | undefined} | undefined}
  */
 function findImageMarker(str, compartment) {
     const imageRexExp = new RegExp(imageMarkerRegex.source, 'g');
@@ -570,14 +572,10 @@ function findImageMarker(str, compartment) {
     const expression = match[1]
     const value = compartment.evaluate(expression)
     
-    if (value instanceof ArrayBuffer) {
-        // TODO : 
-        //  - Rajouter un fichier image dans le odt avec le ArrayBuffer comme contenu (ou autre type)
-        //  - Rajouter un suffixe/titre (donc peut-être changer l'api pour que photo ça soit un objet qui contienne arraybuffer et d'autres choses)
-        //  - puis remplacer le texte par peut-être <draw:image et peut-être <draw:frame et peut être pas ici
-        return value
+    if (isOdfjsImage(value)) {
+        return { expression, odfjsImage: value}
     } else {
-        // TODO: throws an exception
+        return { expression }
     }
 }
 
@@ -790,9 +788,23 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
                             currentNode.parentNode?.replaceChild(newTextNode, currentNode)
                         } else {
                             const imageMarker = findImageMarker(currentNode.data, compartment)
-                            
                             if (imageMarker){
                                 console.log({imageMarker}, "dans le if")
+                                if (imageMarker.odfjsImage) {
+                                // TODO : 
+                                //  - Rajouter un fichier image dans le odt avec le ArrayBuffer comme contenu (ou autre type)
+                                //  - Rajouter un suffixe/titre (donc peut-être changer l'api pour que photo ça soit un objet qui contienne arraybuffer et d'autres choses)
+                                //  - puis remplacer le texte par peut-être <draw:image et peut-être <draw:frame et peut être pas ici
+
+                                //         <draw:frame draw:style-name="fr1" draw:name="Image1" text:anchor-type="char"
+                                //     svg:width="7.28cm" svg:height="10.239cm" draw:z-index="0">
+                                //     <draw:image xlink:href="Pictures/100000000000016C00000200F498F14E.jpg"
+                                //         xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"
+                                //         draw:mime-type="image/jpeg" />
+                                // </draw:frame>                                   
+                                } else {
+                                    throw new Error(`No valid OdfjsImage value has been found for expression: ${imageMarker.expression}`)
+                                }
                             }
                             
 
