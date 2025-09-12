@@ -103,6 +103,7 @@ const templatePath = join(import.meta.dirname, '../tests/fixtures/partially-form
 const data = {nombre : 37}
 */  
 
+/*
 const templatePath = join(import.meta.dirname, '../tests/fixtures/text-after-closing-each.odt')
 const data = {
     saison: 'Printemps',
@@ -112,7 +113,10 @@ const data = {
         'Blette'
     ]
 }
+*/
 
+const templatePath = join(import.meta.dirname, '../tests/fixtures/AP_scientifiques.odt')
+const data = {nombre : 37}
 
 
 const odtTemplate = await getOdtTemplate(templatePath)
