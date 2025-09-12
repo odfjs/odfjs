@@ -115,8 +115,8 @@ const data = {
 }
 */
 
-const templatePath = join(import.meta.dirname, '../tests/fixtures/AP_scientifiques.odt')
-const data = {nombre : 37}
+const templatePath = join(import.meta.dirname, '../tests/fixtures/if-then-each.odt')
+const data = {liste_départements : ['95', '33']}
 
 
 const odtTemplate = await getOdtTemplate(templatePath)
