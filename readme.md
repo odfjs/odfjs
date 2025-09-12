@@ -18,7 +18,7 @@ Small lib to parse/understand .odf files (.odt, .ods) in the browser and node.js
 ### Install
 
 ```sh
-npm i https://github.com/odfjs/odfjs.git#v0.25.0
+npm i https://github.com/odfjs/odfjs.git#v0.26.0
 ```
 
 
