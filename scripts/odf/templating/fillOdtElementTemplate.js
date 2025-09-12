@@ -601,6 +601,7 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
         // @ts-ignore
         traverse(rootElement, currentNode => {
             //console.log('currentlyOpenBlocks', currentlyOpenBlocks)
+            //console.log('eachOpeningMarkerNode', eachOpeningMarkerNode)
 
             const insideAnOpenBlock = currentlyOpenBlocks.length >= 1
 
@@ -637,11 +638,10 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
 
                 if(isEachClosingBlock) {
 
-                    //console.log('isEachClosingBlock', isEachClosingBlock)
+                    //console.log('isEachClosingBlock', isEachClosingBlock, currentlyOpenBlocks)
 
-                    if(!eachOpeningMarkerNode){
-                        throw new Error(`{/each} found without corresponding opening {#each x as y}`)
-                    }
+                    if(!insideAnOpenBlock)
+                        throw new Error('{/each} found without corresponding opening {#each x as y}')
 
                     if(currentlyOpenBlocks.at(-1) !== EACH)
                         throw new Error(`{/each} found while the last opened block was not an opening {#each x as y}`)
