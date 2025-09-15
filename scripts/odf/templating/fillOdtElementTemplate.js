@@ -184,12 +184,18 @@ class TemplateBlock{
     /** @type {Node[]} */
     #middleContent;
 
+    /**@type {any} */
+    #addImageToOdtFile;
+
     /**
      * 
      * @param {Node} startNode 
      * @param {Node} endNode 
+     * @param {(OdfjsImage) => string} addImageToOdtFile
      */
-    constructor(startNode, endNode){
+    constructor(startNode, endNode, addImageToOdtFile){
+        this.#addImageToOdtFile = addImageToOdtFile
+
         // @ts-expect-error xmldom.Node
         this.#commonAncestor = findCommonAncestor(startNode, endNode)
 
@@ -233,7 +239,7 @@ class TemplateBlock{
         const startChild = this.startBranch.at(1)
         if(startChild /*&& startChild !== */){
             //console.log('[fillBlockContentTemplate] startChild', startChild.nodeName, startChild.textContent)
-            fillOdtElementTemplate(startChild, compartement)
+            fillOdtElementTemplate(startChild, compartement, this.#addImageToOdtFile)
         }
         //console.log('[fillBlockContentTemplate] after startChild')
 
@@ -241,7 +247,7 @@ class TemplateBlock{
         // if content consists of several parts of an {#each}{/each}
         // when arriving to the {/each}, it will be alone (and imbalanced)
         // and will trigger an error
-        fillOdtElementTemplate(Array.from(this.#middleContent), compartement)
+        fillOdtElementTemplate(Array.from(this.#middleContent), compartement, this.#addImageToOdtFile)
 
         //console.log('[fillBlockContentTemplate] after middleContent')
 
@@ -251,7 +257,7 @@ class TemplateBlock{
 
         if(endChild){
             //console.log('[fillBlockContentTemplate] endChild', endChild.nodeName, endChild.textContent)
-            fillOdtElementTemplate(endChild, compartement)
+            fillOdtElementTemplate(endChild, compartement, this.#addImageToOdtFile)
         }
         //console.log('[fillBlockContentTemplate] after endChild')
 
@@ -349,7 +355,7 @@ class TemplateBlock{
             }
         }
 
-        return new TemplateBlock(startLeafCloneNode, endLeafCloneNode)
+        return new TemplateBlock(startLeafCloneNode, endLeafCloneNode, this.#addImageToOdtFile)
     }
 
 }
@@ -428,8 +434,9 @@ function findPlacesToFillInString(str, compartment) {
  * @param {Node} ifClosingMarkerNode 
  * @param {string} ifBlockConditionExpression 
  * @param {Compartment} compartment 
+ * // TODO type,addImageToOdtFile
  */
-function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment) {
+function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment, addImageToOdtFile) {
     //const docEl = ifOpeningMarkerNode.ownerDocument.documentElement
     
     const conditionValue = compartment.evaluate(ifBlockConditionExpression)
@@ -445,11 +452,11 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
             ifElseMarkerNode.childNodes.length, ifElseMarkerNode.textContent
         )*/
 
-        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifElseMarkerNode)
-        elseTemplateBlock = new TemplateBlock(ifElseMarkerNode, ifClosingMarkerNode)
+        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifElseMarkerNode, addImageToOdtFile)
+        elseTemplateBlock = new TemplateBlock(ifElseMarkerNode, ifClosingMarkerNode, addImageToOdtFile)
     }
     else {
-        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifClosingMarkerNode)
+        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifClosingMarkerNode, addImageToOdtFile)
     }
 
     if(conditionValue) {
@@ -488,14 +495,15 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
  * @param {string} itemExpression 
  * @param {Node} endNode 
  * @param {Compartment} compartment 
+ * // TODO type addImageToOdtFile
  */
-function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment) {
+function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment, addImageToOdtFile) {
     //console.log('fillEachBlock', iterableExpression, itemExpression)
 
     const docEl = startNode.ownerDocument.documentElement
     //console.log('[fillEachBlock] docEl', docEl.textContent)
 
-    const repeatedTemplateBlock = new TemplateBlock(startNode, endNode)
+    const repeatedTemplateBlock = new TemplateBlock(startNode, endNode, addImageToOdtFile)
 
     // Find the iterable in the data
     let iterable = compartment.evaluate(iterableExpression)
@@ -589,9 +597,10 @@ const EACH = eachStartMarkerRegex.source
  * 
  * @param {RootElementArgument | RootElementArgument[]} rootElements
  * @param {Compartment} compartment 
+ * @param {(OdfjsImage) => string} addImageToOdtFile
  * @returns {void}
  */
-export default function fillOdtElementTemplate(rootElements, compartment) {
+export default function fillOdtElementTemplate(rootElements, compartment, addImageToOdtFile) {
     
     if(!Array.isArray(rootElements)){
         rootElements = [rootElements]
@@ -678,7 +687,7 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
                         // execute replacement loop
                         //console.log('start of fillEachBlock')
 
-                        fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment)
+                        fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment, addImageToOdtFile)
 
                         //console.log('end of fillEachBlock')
 
@@ -753,7 +762,7 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
 
                             // found an {#if} and its corresponding {/if}
                             // execute replacement loop
-                            fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment)
+                            fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment, addImageToOdtFile)
 
                             ifOpeningMarkerNode = undefined
                             ifElseMarkerNode = undefined
@@ -789,19 +798,19 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
                         } else {
                             const imageMarker = findImageMarker(currentNode.data, compartment)
                             if (imageMarker){
-                                console.log({imageMarker}, "dans le if")
+                                console.log({imageMarker}, "dans le if imageMarker")
                                 if (imageMarker.odfjsImage) {
-                                // TODO : 
-                                //  - Rajouter un fichier image dans le odt avec le ArrayBuffer comme contenu (ou autre type)
-                                //  - Rajouter un suffixe/titre (donc peut-être changer l'api pour que photo ça soit un objet qui contienne arraybuffer et d'autres choses)
-                                //  - puis remplacer le texte par peut-être <draw:image et peut-être <draw:frame et peut être pas ici
+                                    const href  = addImageToOdtFile(imageMarker.odfjsImage)
+                                    // TODO : 
+                                    //  - Rajouter un fichier image dans le odt avec le ArrayBuffer comme contenu (ou autre type)
+                                    //  - puis remplacer le texte par peut-être <draw:image et peut-être <draw:frame et peut être pas ici
 
-                                //         <draw:frame draw:style-name="fr1" draw:name="Image1" text:anchor-type="char"
-                                //     svg:width="7.28cm" svg:height="10.239cm" draw:z-index="0">
-                                //     <draw:image xlink:href="Pictures/100000000000016C00000200F498F14E.jpg"
-                                //         xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"
-                                //         draw:mime-type="image/jpeg" />
-                                // </draw:frame>                                   
+                                    //         <draw:frame draw:style-name="fr1" draw:name="Image1" text:anchor-type="char"
+                                    //     svg:width="7.28cm" svg:height="10.239cm" draw:z-index="0">
+                                    //     <draw:image xlink:href="Pictures/100000000000016C00000200F498F14E.jpg"
+                                    //         xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"
+                                    //         draw:mime-type="image/jpeg" />
+                                    // </draw:frame>                                   
                                 } else {
                                     throw new Error(`No valid OdfjsImage value has been found for expression: ${imageMarker.expression}`)
                                 }
