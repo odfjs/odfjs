@@ -801,6 +801,24 @@ export default function fillOdtElementTemplate(rootElements, compartment, addIma
                                 console.log({imageMarker}, "dans le if imageMarker")
                                 if (imageMarker.odfjsImage) {
                                     const href  = addImageToOdtFile(imageMarker.odfjsImage)
+
+                                    const newImageNode = currentNode.ownerDocument?.createElement("draw:image")
+                                    newImageNode.setAttribute("xlink:href", href)
+                                    newImageNode.setAttribute("xlink:type", "simple")
+                                    newImageNode.setAttribute("xlink:show", "embed")
+                                    newImageNode.setAttribute("xlink:actuate", "onLoad")
+                                    newImageNode.setAttribute("draw:mime-type", imageMarker.odfjsImage.mediaType)
+
+                                    const newFrameNode = currentNode.ownerDocument?.createElement('draw:frame')
+                                    newFrameNode.setAttribute("text:anchor-type", "char")
+                                    newFrameNode.setAttribute("svg:width", "7.28cm")
+                                    newFrameNode.setAttribute("svg:height", "10.239cm")
+                                    newFrameNode.setAttribute("draw:z-index", "0")
+                                    newFrameNode.appendChild(newImageNode)
+
+                                    currentNode.parentNode?.replaceChild(newFrameNode, currentNode)
+
+                                    
                                     // TODO : 
                                     //  - Rajouter un fichier image dans le odt avec le ArrayBuffer comme contenu (ou autre type)
                                     //  - puis remplacer le texte par peut-être <draw:image et peut-être <draw:frame et peut être pas ici

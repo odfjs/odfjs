@@ -74,7 +74,11 @@ export default async function fillOdtTemplate(odtTemplate, data) {
     */
     function addImageToOdtFile(odfjsImage) {
         // console.log({odfjsImage})
-        zipEntriesToAdd.push({content: new Uint8ArrayReader(new Uint8Array(odfjsImage.content)), filename: `Pictures/${odfjsImage.fileName}`})
+        const fileName = `Pictures/${odfjsImage.fileName}`
+        zipEntriesToAdd.push({content: new Uint8ArrayReader(new Uint8Array(odfjsImage.content)), filename: fileName})
+        return fileName
+
+
     }
 
     // Parcourir chaque entrée du fichier ODT
