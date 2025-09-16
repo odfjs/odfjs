@@ -1,6 +1,7 @@
 import {traverse, Node, getAncestors, findCommonAncestor} from "../../DOMUtils.js";
 import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, imageMarkerRegex, variableRegex} from './markers.js'
 import {isOdfjsImage} from "../../shared.js"
+import imageSize from "image-size";
 /** @import {OdfjsImage} from "../../types.js" */
 
 /**
@@ -810,10 +811,30 @@ export default function fillOdtElementTemplate(rootElements, compartment, addIma
                                     newImageNode.setAttribute("draw:mime-type", imageMarker.odfjsImage.mediaType)
 
                                     const newFrameNode = currentNode.ownerDocument?.createElement('draw:frame')
-                                    newFrameNode.setAttribute("text:anchor-type", "frame")
-                                    newFrameNode.setAttribute("svg:width", "7.28cm")
-                                    newFrameNode.setAttribute("svg:height", "10.239cm")
-                                    newFrameNode.setAttribute("draw:z-index", "0")
+                                    newFrameNode.setAttribute("text:anchor-type", "as-char")
+                                    const buffer = new Uint8Array(imageMarker.odfjsImage.content)
+                                    
+                                    const dimensions = imageSize(buffer)
+
+                                    const MAX_WIDTH = 10 // cm
+                                    const MAX_HEIGHT = 10 // cm
+
+                                    let width;
+                                    let height;
+
+                                    if(dimensions.width > dimensions.height){
+                                        // image in landscape
+                                        width = MAX_WIDTH;
+                                        height = width*dimensions.height/dimensions.width
+                                    }
+                                    else{
+                                        // image in portrait
+                                        height = MAX_HEIGHT;
+                                        width = height*dimensions.width/dimensions.height
+                                    }
+
+                                    newFrameNode.setAttribute("svg:width", `${width}cm`)
+                                    newFrameNode.setAttribute("svg:height", `${height}cm`)
                                     newFrameNode.appendChild(newImageNode)
 
                                     currentNode.parentNode?.replaceChild(newFrameNode, currentNode)                                
