@@ -6,6 +6,7 @@ import {getOdtTemplate} from '../../scripts/odf/odtTemplate-forNode.js'
 
 import {fillOdtTemplate, getOdtTextContent} from '../../exports.js'
 import { listZipEntries } from '../helpers/zip-analysis.js';
+import { getContentDocument } from '../../scripts/odf/odt/getOdtTextContent.js';
 
 
 test.skip('template filling preserves images', async t => {
@@ -75,6 +76,9 @@ test('insert 2 images', async t => {
         `Two pictures in 'Pictures/' folder are expected`
     )
 
+    const odtContentDocument = await getContentDocument(odtResult)
 
-    t.fail('Two images should be in the content.xml file')
+    const drawImageElements = odtContentDocument.getElementsByTagName('draw:image')
+    t.is(drawImageElements.length, 2, 'Two draw:image elements should be in the generated document.')
+   
 })

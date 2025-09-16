@@ -7,7 +7,7 @@ import {parseXML, Node} from '../../DOMUtils.js'
  * @param {ODTFile} odtFile 
  * @returns {Promise<Document>}
  */
-async function getContentDocument(odtFile) {
+export async function getContentDocument(odtFile) {
     const reader = new ZipReader(new Uint8ArrayReader(new Uint8Array(odtFile)));
 
     const entries = await reader.getEntries();
