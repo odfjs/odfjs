@@ -810,25 +810,13 @@ export default function fillOdtElementTemplate(rootElements, compartment, addIma
                                     newImageNode.setAttribute("draw:mime-type", imageMarker.odfjsImage.mediaType)
 
                                     const newFrameNode = currentNode.ownerDocument?.createElement('draw:frame')
-                                    newFrameNode.setAttribute("text:anchor-type", "char")
+                                    newFrameNode.setAttribute("text:anchor-type", "frame")
                                     newFrameNode.setAttribute("svg:width", "7.28cm")
                                     newFrameNode.setAttribute("svg:height", "10.239cm")
                                     newFrameNode.setAttribute("draw:z-index", "0")
                                     newFrameNode.appendChild(newImageNode)
 
-                                    currentNode.parentNode?.replaceChild(newFrameNode, currentNode)
-
-                                    
-                                    // TODO : 
-                                    //  - Rajouter un fichier image dans le odt avec le ArrayBuffer comme contenu (ou autre type)
-                                    //  - puis remplacer le texte par peut-être <draw:image et peut-être <draw:frame et peut être pas ici
-
-                                    //         <draw:frame draw:style-name="fr1" draw:name="Image1" text:anchor-type="char"
-                                    //     svg:width="7.28cm" svg:height="10.239cm" draw:z-index="0">
-                                    //     <draw:image xlink:href="Pictures/100000000000016C00000200F498F14E.jpg"
-                                    //         xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad"
-                                    //         draw:mime-type="image/jpeg" />
-                                    // </draw:frame>                                   
+                                    currentNode.parentNode?.replaceChild(newFrameNode, currentNode)                                
                                 } else {
                                     throw new Error(`No valid OdfjsImage value has been found for expression: ${imageMarker.expression}`)
                                 }
