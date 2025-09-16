@@ -11,7 +11,8 @@ lockdown();
 
 
 /** @import {Reader, ZipWriterAddDataOptions} from '@zip.js/zip.js' */
-/** @import {ODFManifest} from '../manifest.js' */
+/** @import {ODFManifest, ODFManifestFileEntry} from '../manifest.js' */
+/** @import {OdfjsImage} from '../../types.js' */
 
 /** @typedef {ArrayBuffer} ODTFile */
 
@@ -23,11 +24,12 @@ const ODTMimetype = 'application/vnd.oasis.opendocument.text'
  * 
  * @param {Document} document 
  * @param {Compartment} compartment 
+ * @param {(OdfjsImage) => string} addImageToOdtFile
  * @returns {void}
  */
-function fillOdtDocumentTemplate(document, compartment) {
+function fillOdtDocumentTemplate(document, compartment, addImageToOdtFile) {
     prepareTemplateDOMTree(document)
-    fillOdtElementTemplate(document, compartment)
+    fillOdtElementTemplate(document, compartment, addImageToOdtFile)
 }
 
 
@@ -64,6 +66,21 @@ export default async function fillOdtTemplate(odtTemplate, data) {
 
     /** @type {{filename: string, content: Reader, options?: ZipWriterAddDataOptions}[]} */
     const zipEntriesToAdd = []
+    /** @type {ODFManifestFileEntry[]} */
+    const newManifestEntries = []
+
+    /** 
+     * Return href
+     * @param {OdfjsImage} odfjsImage
+     * @returns {string}
+    */
+    function addImageToOdtFile(odfjsImage) {
+        // console.log({odfjsImage})
+        const filename = `Pictures/${odfjsImage.fileName}`
+        zipEntriesToAdd.push({content: new Uint8ArrayReader(new Uint8Array(odfjsImage.content)), filename})
+        newManifestEntries.push({fullPath: filename, mediaType: odfjsImage.mediaType})
+        return filename
+    }
 
     // Parcourir chaque entrée du fichier ODT
     for await(const entry of entries) {
@@ -96,13 +113,15 @@ export default async function fillOdtTemplate(odtTemplate, data) {
                     // @ts-ignore
                     const contentXml = await entry.getData(new TextWriter());
                     const contentDocument = parseXML(contentXml);
+                    
+
 
                     const compartment = new Compartment({
                         globals: data,
                         __options__: true
                     })
 
-                    fillOdtDocumentTemplate(contentDocument, compartment)
+                    fillOdtDocumentTemplate(contentDocument, compartment, addImageToOdtFile)
 
                     const updatedContentXml = serializeToString(contentDocument)
 
@@ -138,6 +157,9 @@ export default async function fillOdtTemplate(odtTemplate, data) {
         }
     }
 
+    for(const {fullPath, mediaType} of newManifestEntries){
+        manifestFileData.fileEntries.set(fullPath, {fullPath, mediaType})
+    }
 
     for(const {filename, content, options} of zipEntriesToAdd) {
         await writer.add(filename, content, options);

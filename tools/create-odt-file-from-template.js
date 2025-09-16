@@ -1,4 +1,4 @@
-import {writeFile} from 'node:fs/promises'
+import {writeFile, readFile} from 'node:fs/promises'
 import {join} from 'node:path';
 
 import {getOdtTemplate} from '../scripts/odf/odtTemplate-forNode.js'
@@ -114,9 +114,33 @@ const data = {
     ]
 }
 */
+// const templatePath = join(import.meta.dirname, '../tests/fixtures/text-after-closing-each.odt')
+// const data = {
+//     saison: 'Printemps',
+//     légumes: [
+//         'Asperge',
+//         'Betterave',
+//         'Blette'
+//     ]
+// }
 
-const templatePath = join(import.meta.dirname, '../tests/fixtures/if-then-each.odt')
-const data = {liste_départements : ['95', '33']}
+// const templatePath = join(import.meta.dirname, '../tests/fixtures/if-then-each.odt')
+// const data = {liste_départements : ['95', '33']}
+
+
+const templatePath = join(import.meta.dirname, '../tests/fixtures/basic-image-insertion.odt')
+const photo1Path = join(import.meta.dirname, '../tests/fixtures/pitchou-1.png')
+const photo2Path = join(import.meta.dirname, '../tests/fixtures/pitchou-2.png')
+
+const photo1Buffer = (await readFile(photo1Path)).buffer
+const photo2Buffer = (await readFile(photo2Path)).buffer
+
+const photos = [{content: photo1Buffer, fileName: 'pitchou-1.png', mediaType: 'image/png'}, {content: photo2Buffer, fileName: 'pitchou-2.png', mediaType: 'image/png'}]
+
+const data = {
+    title: 'Titre de mon projet',
+    photos,
+}
 
 
 const odtTemplate = await getOdtTemplate(templatePath)

@@ -1,5 +1,8 @@
 import {traverse, Node, getAncestors, findCommonAncestor} from "../../DOMUtils.js";
-import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, variableRegex} from './markers.js'
+import {closingIfMarker, eachClosingMarker, eachStartMarkerRegex, elseMarker, ifStartMarkerRegex, imageMarkerRegex, variableRegex} from './markers.js'
+import {isOdfjsImage} from "../../shared.js"
+import imageSize from "image-size";
+/** @import {OdfjsImage} from "../../types.js" */
 
 /**
  * @typedef TextPlaceToFill
@@ -182,12 +185,18 @@ class TemplateBlock{
     /** @type {Node[]} */
     #middleContent;
 
+    /**@type {any} */
+    #addImageToOdtFile;
+
     /**
      * 
      * @param {Node} startNode 
      * @param {Node} endNode 
+     * @param {(OdfjsImage) => string} addImageToOdtFile
      */
-    constructor(startNode, endNode){
+    constructor(startNode, endNode, addImageToOdtFile){
+        this.#addImageToOdtFile = addImageToOdtFile
+
         // @ts-expect-error xmldom.Node
         this.#commonAncestor = findCommonAncestor(startNode, endNode)
 
@@ -231,7 +240,7 @@ class TemplateBlock{
         const startChild = this.startBranch.at(1)
         if(startChild /*&& startChild !== */){
             //console.log('[fillBlockContentTemplate] startChild', startChild.nodeName, startChild.textContent)
-            fillOdtElementTemplate(startChild, compartement)
+            fillOdtElementTemplate(startChild, compartement, this.#addImageToOdtFile)
         }
         //console.log('[fillBlockContentTemplate] after startChild')
 
@@ -239,7 +248,7 @@ class TemplateBlock{
         // if content consists of several parts of an {#each}{/each}
         // when arriving to the {/each}, it will be alone (and imbalanced)
         // and will trigger an error
-        fillOdtElementTemplate(Array.from(this.#middleContent), compartement)
+        fillOdtElementTemplate(Array.from(this.#middleContent), compartement, this.#addImageToOdtFile)
 
         //console.log('[fillBlockContentTemplate] after middleContent')
 
@@ -249,7 +258,7 @@ class TemplateBlock{
 
         if(endChild){
             //console.log('[fillBlockContentTemplate] endChild', endChild.nodeName, endChild.textContent)
-            fillOdtElementTemplate(endChild, compartement)
+            fillOdtElementTemplate(endChild, compartement, this.#addImageToOdtFile)
         }
         //console.log('[fillBlockContentTemplate] after endChild')
 
@@ -347,7 +356,7 @@ class TemplateBlock{
             }
         }
 
-        return new TemplateBlock(startLeafCloneNode, endLeafCloneNode)
+        return new TemplateBlock(startLeafCloneNode, endLeafCloneNode, this.#addImageToOdtFile)
     }
 
 }
@@ -426,8 +435,9 @@ function findPlacesToFillInString(str, compartment) {
  * @param {Node} ifClosingMarkerNode 
  * @param {string} ifBlockConditionExpression 
  * @param {Compartment} compartment 
+ * // TODO type,addImageToOdtFile
  */
-function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment) {
+function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment, addImageToOdtFile) {
     //const docEl = ifOpeningMarkerNode.ownerDocument.documentElement
     
     const conditionValue = compartment.evaluate(ifBlockConditionExpression)
@@ -443,11 +453,11 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
             ifElseMarkerNode.childNodes.length, ifElseMarkerNode.textContent
         )*/
 
-        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifElseMarkerNode)
-        elseTemplateBlock = new TemplateBlock(ifElseMarkerNode, ifClosingMarkerNode)
+        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifElseMarkerNode, addImageToOdtFile)
+        elseTemplateBlock = new TemplateBlock(ifElseMarkerNode, ifClosingMarkerNode, addImageToOdtFile)
     }
     else {
-        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifClosingMarkerNode)
+        thenTemplateBlock = new TemplateBlock(ifOpeningMarkerNode, ifClosingMarkerNode, addImageToOdtFile)
     }
 
     if(conditionValue) {
@@ -486,14 +496,15 @@ function fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode,
  * @param {string} itemExpression 
  * @param {Node} endNode 
  * @param {Compartment} compartment 
+ * // TODO type addImageToOdtFile
  */
-function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment) {
+function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, compartment, addImageToOdtFile) {
     //console.log('fillEachBlock', iterableExpression, itemExpression)
 
     const docEl = startNode.ownerDocument.documentElement
     //console.log('[fillEachBlock] docEl', docEl.textContent)
 
-    const repeatedTemplateBlock = new TemplateBlock(startNode, endNode)
+    const repeatedTemplateBlock = new TemplateBlock(startNode, endNode, addImageToOdtFile)
 
     // Find the iterable in the data
     let iterable = compartment.evaluate(iterableExpression)
@@ -554,6 +565,29 @@ function fillEachBlock(startNode, iterableExpression, itemExpression, endNode, c
 }
 
 
+/**
+ * @param {string} str
+ * @param {Compartement} compartment
+ * @returns { {expression: string, odfjsImage: OdfjsImage | undefined} | undefined}
+ */
+function findImageMarker(str, compartment) {
+    const imageRexExp = new RegExp(imageMarkerRegex.source, 'g');
+    const match = imageRexExp.exec(str)
+
+    if (match===null){
+        return;
+    }
+
+    const expression = match[1]
+    const value = compartment.evaluate(expression)
+    
+    if (isOdfjsImage(value)) {
+        return { expression, odfjsImage: value}
+    } else {
+        return { expression }
+    }
+}
+
 const IF = ifStartMarkerRegex.source
 const EACH = eachStartMarkerRegex.source
 
@@ -564,9 +598,10 @@ const EACH = eachStartMarkerRegex.source
  * 
  * @param {RootElementArgument | RootElementArgument[]} rootElements
  * @param {Compartment} compartment 
+ * @param {(OdfjsImage) => string} addImageToOdtFile
  * @returns {void}
  */
-export default function fillOdtElementTemplate(rootElements, compartment) {
+export default function fillOdtElementTemplate(rootElements, compartment, addImageToOdtFile) {
     
     if(!Array.isArray(rootElements)){
         rootElements = [rootElements]
@@ -653,7 +688,7 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
                         // execute replacement loop
                         //console.log('start of fillEachBlock')
 
-                        fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment)
+                        fillEachBlock(eachOpeningMarkerNode, eachBlockIterableExpression, eachBlockItemExpression, eachClosingMarkerNode, compartment, addImageToOdtFile)
 
                         //console.log('end of fillEachBlock')
 
@@ -728,7 +763,7 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
 
                             // found an {#if} and its corresponding {/if}
                             // execute replacement loop
-                            fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment)
+                            fillIfBlock(ifOpeningMarkerNode, ifElseMarkerNode, ifClosingMarkerNode, ifBlockConditionExpression, compartment, addImageToOdtFile)
 
                             ifOpeningMarkerNode = undefined
                             ifElseMarkerNode = undefined
@@ -761,6 +796,54 @@ export default function fillOdtElementTemplate(rootElements, compartment) {
                             const newTextNode = currentNode.ownerDocument?.createTextNode(newText)
                             // @ts-ignore
                             currentNode.parentNode?.replaceChild(newTextNode, currentNode)
+                        } else {
+                            const imageMarker = findImageMarker(currentNode.data, compartment)
+                            if (imageMarker){
+                                console.log({imageMarker}, "dans le if imageMarker")
+                                if (imageMarker.odfjsImage) {
+                                    const href  = addImageToOdtFile(imageMarker.odfjsImage)
+
+                                    const newImageNode = currentNode.ownerDocument?.createElement("draw:image")
+                                    newImageNode.setAttribute("xlink:href", href)
+                                    newImageNode.setAttribute("xlink:type", "simple")
+                                    newImageNode.setAttribute("xlink:show", "embed")
+                                    newImageNode.setAttribute("xlink:actuate", "onLoad")
+                                    newImageNode.setAttribute("draw:mime-type", imageMarker.odfjsImage.mediaType)
+
+                                    const newFrameNode = currentNode.ownerDocument?.createElement('draw:frame')
+                                    newFrameNode.setAttribute("text:anchor-type", "as-char")
+                                    const buffer = new Uint8Array(imageMarker.odfjsImage.content)
+                                    
+                                    const dimensions = imageSize(buffer)
+
+                                    const MAX_WIDTH = 10 // cm
+                                    const MAX_HEIGHT = 10 // cm
+
+                                    let width;
+                                    let height;
+
+                                    if(dimensions.width > dimensions.height){
+                                        // image in landscape
+                                        width = MAX_WIDTH;
+                                        height = width*dimensions.height/dimensions.width
+                                    }
+                                    else{
+                                        // image in portrait
+                                        height = MAX_HEIGHT;
+                                        width = height*dimensions.width/dimensions.height
+                                    }
+
+                                    newFrameNode.setAttribute("svg:width", `${width}cm`)
+                                    newFrameNode.setAttribute("svg:height", `${height}cm`)
+                                    newFrameNode.appendChild(newImageNode)
+
+                                    currentNode.parentNode?.replaceChild(newFrameNode, currentNode)                                
+                                } else {
+                                    throw new Error(`No valid OdfjsImage value has been found for expression: ${imageMarker.expression}`)
+                                }
+                            }
+                            
+
                         }
                     }
                 }

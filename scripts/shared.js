@@ -4,7 +4,7 @@ import { Uint8ArrayReader, ZipReader, TextWriter } from '@zip.js/zip.js';
 import {parseXML} from './DOMUtils.js'
 
 /** @import {Entry} from '@zip.js/zip.js'*/
-/** @import {SheetName, SheetRawContent, SheetRowRawContent, SheetCellRawContent} from './types.js' */
+/** @import {SheetName, SheetRawContent, SheetRowRawContent, SheetCellRawContent, OdfjsImage} from './types.js' */
 
 
 // https://dom.spec.whatwg.org/#interface-node
@@ -159,6 +159,22 @@ export function convertCellValue({value, type}) {
     }
 }
 
+
+/**
+ * @param {unknown} value
+ * @returns {value is OdfjsImage} 
+ */
+export function isOdfjsImage(value) {
+    if (typeof value === 'object' && value!==null 
+        && "content" in value && value.content instanceof ArrayBuffer
+        && "fileName" in value && typeof value.fileName === 'string'
+        && "mediaType" in value && typeof value.mediaType === 'string'
+    ) {
+        return true
+    } else {
+        return false
+    }
+}
 
 
 
