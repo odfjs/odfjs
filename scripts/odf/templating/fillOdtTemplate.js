@@ -11,7 +11,7 @@ lockdown();
 
 
 /** @import {Reader, ZipWriterAddDataOptions} from '@zip.js/zip.js' */
-/** @import {ODFManifest} from '../manifest.js' */
+/** @import {ODFManifest, ODFManifestFileEntry} from '../manifest.js' */
 /** @import {OdfjsImage} from '../../types.js' */
 
 /** @typedef {ArrayBuffer} ODTFile */
@@ -66,6 +66,8 @@ export default async function fillOdtTemplate(odtTemplate, data) {
 
     /** @type {{filename: string, content: Reader, options?: ZipWriterAddDataOptions}[]} */
     const zipEntriesToAdd = []
+    /** @type {ODFManifestFileEntry[]} */
+    const newManifestEntries = []
 
     /** 
      * Return href
@@ -74,11 +76,10 @@ export default async function fillOdtTemplate(odtTemplate, data) {
     */
     function addImageToOdtFile(odfjsImage) {
         // console.log({odfjsImage})
-        const fileName = `Pictures/${odfjsImage.fileName}`
-        zipEntriesToAdd.push({content: new Uint8ArrayReader(new Uint8Array(odfjsImage.content)), filename: fileName})
-        return fileName
-
-
+        const filename = `Pictures/${odfjsImage.fileName}`
+        zipEntriesToAdd.push({content: new Uint8ArrayReader(new Uint8Array(odfjsImage.content)), filename})
+        newManifestEntries.push({fullPath: filename, mediaType: odfjsImage.mediaType})
+        return filename
     }
 
     // Parcourir chaque entrée du fichier ODT
@@ -156,6 +157,9 @@ export default async function fillOdtTemplate(odtTemplate, data) {
         }
     }
 
+    for(const {fullPath, mediaType} of newManifestEntries){
+        manifestFileData.fileEntries.set(fullPath, {fullPath, mediaType})
+    }
 
     for(const {filename, content, options} of zipEntriesToAdd) {
         await writer.add(filename, content, options);
