@@ -99,8 +99,7 @@ And then run the code:
 ```js
 import {join} from 'node:path';
 
-import {getOdtTemplate} from '../scripts/odf/odtTemplate-forNode.js'
-import {fillOdtTemplate} from '../scripts/node.js'
+import {getOdtTemplate, fillOdtTemplate} from '@odfjs/odfjs'
 
 // replace with your template path
 const templatePath = join(import.meta.dirname, './tests/data/template-anniversaire.odt')
