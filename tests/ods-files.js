@@ -45,14 +45,14 @@ test('.ods file with new lines in content is ', async t => {
 
     const feuille1 = table.get('Feuille1')
 
-    const expectedValue = `Deviens génial, deviens génial
-    Tu n'sais pas encore l'enfer qui t'attend
-    Le regard des uns, le rejet des autres
-    Si t'es bizarre, si t'es pas marrant
-    Deviens génial, deviens génial
-    Deviens génial, deviens génial
-    Pourquoi t'aimeraient-ils seulement comme tu es ? (hein)
-    Si t'es pas comme eux quand t'es naturel`
+const expectedValue = `Deviens génial, deviens génial
+Tu n'sais pas encore l'enfer qui t'attend
+Le regard des uns, le rejet des autres
+Si t'es bizarre, si t'es pas marrant
+Deviens génial, deviens génial
+Deviens génial, deviens génial
+Pourquoi t'aimeraient-ils seulement comme tu es ? (hein)
+Si t'es pas comme eux quand t'es naturel`
 
     t.deepEqual(feuille1[0][0].value, expectedValue)
 });
