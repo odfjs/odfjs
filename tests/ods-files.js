@@ -45,14 +45,34 @@ test('.ods file with new lines in content is ', async t => {
 
     const feuille1 = table.get('Feuille1')
 
-const expectedValue = `Deviens génial, deviens génial
-Tu n'sais pas encore l'enfer qui t'attend
-Le regard des uns, le rejet des autres
-Si t'es bizarre, si t'es pas marrant
-Deviens génial, deviens génial
-Deviens génial, deviens génial
-Pourquoi t'aimeraient-ils seulement comme tu es ? (hein)
-Si t'es pas comme eux quand t'es naturel`
+    const expectedValue = `Deviens génial, deviens génial
+    Tu n'sais pas encore l'enfer qui t'attend
+    Le regard des uns, le rejet des autres
+    Si t'es bizarre, si t'es pas marrant
+    Deviens génial, deviens génial
+    Deviens génial, deviens génial
+    Pourquoi t'aimeraient-ils seulement comme tu es ? (hein)
+    Si t'es pas comme eux quand t'es naturel`
 
     t.deepEqual(feuille1[0][0].value, expectedValue)
+});
+
+test('.ods cells with mails should be recognized', async t => {
+    const odsFileWithEmails = (await readFile('./tests/fixtures/cellules avec emails.ods')).buffer
+	const table = await getODSTableRawContent(odsFileWithEmails);
+
+    const feuille1 = table.get('Feuille1')
+
+    const row1 = feuille1[0]
+    t.deepEqual(row1[0].value, 'Nom')
+    t.deepEqual(row1[1].value, 'Email')
+
+    const row2 = feuille1[1]
+
+    t.deepEqual(row2[0].value, 'Dav')
+    t.deepEqual(row2[1].value, 'david@mail.fr')
+
+    const row3 = feuille1[2]
+    t.deepEqual(row3[0].value, 'Fanny')
+    t.deepEqual(row3[1].value, 'lemaildeFanny@cemail.com')
 });

@@ -34,7 +34,7 @@ function extraxtODSCellText(cell) {
                 } else if (pChild.nodeName === 'text:line-break') {
                     text += '\n';  // Append newline for <text:line-break />
                 } else if (pChild.nodeName === 'text:a') {
-                    text += pChild.nodeName
+                    text += pChild.textContent
                 }
             }
         } else if (child.nodeName === 'text:line-break') {
