@@ -99,8 +99,7 @@ And then run the code:
 ```js
 import {join} from 'node:path';
 
-import {getOdtTemplate} from '../scripts/odf/odtTemplate-forNode.js'
-import {fillOdtTemplate} from '../scripts/node.js'
+import {getOdtTemplate, fillOdtTemplate} from '@odfjs/odfjs'
 
 // replace with your template path
 const templatePath = join(import.meta.dirname, './tests/data/template-anniversaire.odt')
@@ -124,6 +123,19 @@ There are also loops in the form:
 ```
 
 They can be used to generate lists or tables in .odt files from data and a template using this syntax
+
+
+#### Securing calls to fillOdtTemplate
+
+`fillOdtTemplate` evaluate arbitrary JavaScript code in `{#each <collection> as élément}` and `{#if <condition>}` and in `{<expression>}`
+
+By default, `fillOdtTemplate` limits access to global functions to only ECMAScript defaults via the use of [ses' Compartment](https://www.npmjs.com/package/ses#compartment), this prevents naïve data exfiltration
+
+However, `fillOdtTemplate` is vulnerable to [prototype pollution](https://cheatsheetseries.owasp.org/cheatsheets/Prototype_Pollution_Prevention_Cheat_Sheet.html) inside template code. Two main ways to be secure are:
+- control the set of possible templates
+- call ses' `lockdown` which freezes Javascript intrinsics before calling `fillOdtTemplate` (this may lead to incompatibilities)
+
+
 
 
 ### Demo

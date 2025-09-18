@@ -9,7 +9,7 @@ import { listZipEntries } from '../helpers/zip-analysis.js';
 import { getContentDocument } from '../../scripts/odf/odt/getOdtTextContent.js';
 
 
-test.skip('template filling preserves images', async t => {
+test('template filling preserves images', async t => {
     const templatePath = join(import.meta.dirname, '../fixtures/template-avec-image.odt')
 
 	const data = {

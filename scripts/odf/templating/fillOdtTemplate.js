@@ -7,8 +7,6 @@ import prepareTemplateDOMTree from './prepareTemplateDOMTree.js';
 import 'ses'
 import fillOdtElementTemplate from './fillOdtElementTemplate.js';
 
-lockdown();
-
 
 /** @import {Reader, ZipWriterAddDataOptions} from '@zip.js/zip.js' */
 /** @import {ODFManifest, ODFManifestFileEntry} from '../manifest.js' */
