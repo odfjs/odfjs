@@ -70,9 +70,9 @@ test('.ods cells with mails should be recognized', async t => {
     const row2 = feuille1[1]
 
     t.deepEqual(row2[0].value, 'Dav')
-    t.deepEqual(row2[1].value, 'david@mail.fr')
+    t.deepEqual(row2[1].value, 'david@example.org')
 
     const row3 = feuille1[2]
     t.deepEqual(row3[0].value, 'Fanny')
-    t.deepEqual(row3[1].value, 'lemaildeFanny@cemail.com')
+    t.deepEqual(row3[1].value, 'lemaildeFanny@example.com')
 });
