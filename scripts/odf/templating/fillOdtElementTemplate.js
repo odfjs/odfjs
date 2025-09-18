@@ -799,7 +799,7 @@ export default function fillOdtElementTemplate(rootElements, compartment, addIma
                         } else {
                             const imageMarker = findImageMarker(currentNode.data, compartment)
                             if (imageMarker){
-                                console.log({imageMarker}, "dans le if imageMarker")
+                                //console.log({imageMarker}, "dans le if imageMarker")
                                 if (imageMarker.odfjsImage) {
                                     const href  = addImageToOdtFile(imageMarker.odfjsImage)
 

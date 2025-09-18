@@ -18,7 +18,6 @@ const TEXT_NODE = 3
 function extraxtODSCellText(cell) {
     let text = '';
     const childNodes = cell.childNodes;
-
     for (const child of Array.from(childNodes)) {
         if (child.nodeType === TEXT_NODE) {
             // Direct text node, append the text directly
@@ -34,6 +33,8 @@ function extraxtODSCellText(cell) {
                     text += pChild.nodeValue;  // Append text inside <text:p>
                 } else if (pChild.nodeName === 'text:line-break') {
                     text += '\n';  // Append newline for <text:line-break />
+                } else if (pChild.nodeName === 'text:a') {
+                    text += pChild.textContent
                 }
             }
         } else if (child.nodeName === 'text:line-break') {
