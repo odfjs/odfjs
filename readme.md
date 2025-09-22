@@ -18,7 +18,7 @@ Small lib to parse/understand .odf files (.odt, .ods) in the browser and node.js
 ### Install
 
 ```sh
-npm i https://github.com/odfjs/odfjs.git#v0.29.0
+npm i https://github.com/odfjs/odfjs.git#v0.30.0
 ```
 
 
@@ -30,7 +30,7 @@ import {tableRawContentToObjects, tableWithoutEmptyRows, getODSTableRawContent} 
 /**
  * @param {ArrayBuffer} odsFile - content of an .ods file
  * @return {Promise<any[]>}
- */ 
+ */
 async function getFileData(odsFile){
     return getODSTableRawContent(odsFile)
         .then(tableWithoutEmptyRows)
@@ -38,9 +38,9 @@ async function getFileData(odsFile){
 }
 ```
 
-The return value is an array of objects where 
-the **keys** are the column names in the first row and 
-the **values** are automatically converted from the .ods files (which type numbers, strings, booleans and dates) 
+The return value is an array of objects where
+the **keys** are the column names in the first row and
+the **values** are automatically converted from the .ods files (which type numbers, strings, booleans and dates)
 to the appropriate JavaScript value
 
 
@@ -88,7 +88,7 @@ odf.js proposes a template syntax
 In an .odt file, write the following:
 
 ```txt
-Hey {nom}! 
+Hey {nom}!
 
 Your birthdate is {dateNaissance}
 ```
@@ -158,4 +158,3 @@ npm run dev
 I hope to be credited for the work on this repo
 
 Everything written by me and contributors to this repo is licenced under **CC0 1.0 (Public Domain)**
-
