@@ -76,3 +76,13 @@ test('.ods cells with mails should be recognized', async t => {
     t.deepEqual(row3[0].value, 'Fanny')
     t.deepEqual(row3[1].value, 'lemaildeFanny@example.com')
 });
+
+test('.ods cells with partially styled content should be recognized', async t => {
+    const odsFileWithStyle = (await readFile('./tests/fixtures/cellule avec style.ods')).buffer;
+    const table = await getODSTableRawContent(odsFileWithStyle);
+
+    const feuille1 = table.get('Feuille1');
+
+    const row1 = feuille1[0];
+    t.deepEqual(row1[0].value, 'Toto titi');
+});
