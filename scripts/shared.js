@@ -11,8 +11,8 @@ import {parseXML} from './DOMUtils.js'
 const TEXT_NODE = 3
 
 /**
- * 
- * @param {Element} cell 
+ *
+ * @param {Element} cell
  * @returns {string}
  */
 function extraxtODSCellText(cell) {
@@ -33,7 +33,7 @@ function extraxtODSCellText(cell) {
                     text += pChild.nodeValue;  // Append text inside <text:p>
                 } else if (pChild.nodeName === 'text:line-break') {
                     text += '\n';  // Append newline for <text:line-break />
-                } else if (pChild.nodeName === 'text:a') {
+                } else if (pChild.nodeName === 'text:a' || pChild.nodeName === 'text:span') {
                     text += pChild.textContent
                 }
             }
@@ -41,7 +41,7 @@ function extraxtODSCellText(cell) {
             text += '\n';  // Append newline for <text:line-break /> directly under <table:table-cell>
         }
     }
-    
+
     return text.trim();
 }
 
@@ -127,7 +127,7 @@ export async function getODSTableRawContent(arrayBuffer) {
 
 /**
  * Converts a cell value to the appropriate JavaScript type based on its cell type.
- * @param {SheetCellRawContent} _ 
+ * @param {SheetCellRawContent} _
  * @returns {number | boolean | string | Date} The converted value.
  */
 export function convertCellValue({value, type}) {
@@ -163,10 +163,10 @@ export function convertCellValue({value, type}) {
 
 /**
  * @param {unknown} value
- * @returns {value is OdfjsImage} 
+ * @returns {value is OdfjsImage}
  */
 export function isOdfjsImage(value) {
-    if (typeof value === 'object' && value!==null 
+    if (typeof value === 'object' && value!==null
         && "content" in value && value.content instanceof ArrayBuffer
         && "fileName" in value && typeof value.fileName === 'string'
         && "mediaType" in value && typeof value.mediaType === 'string'
@@ -183,15 +183,15 @@ export function isOdfjsImage(value) {
 
 
 /**
- * 
- * @param {Map<SheetName, SheetRawContent>} rawContentSheets 
+ *
+ * @param {Map<SheetName, SheetRawContent>} rawContentSheets
  * @returns {Map<SheetName, ReturnType<convertCellValue>[][]>}
  */
 export function tableRawContentToValues(rawContentSheets){
     return new Map(
         [...rawContentSheets].map(([sheetName, rawContent]) => {
             return [
-                sheetName, 
+                sheetName,
                 rawContent
                     .map(row => row.map(c => convertCellValue(c)))
             ]
@@ -204,7 +204,7 @@ export function tableRawContentToValues(rawContentSheets){
  */
 
 /**
- * 
+ *
  * @param {SheetCellRawContent} rawContentCell
  * @returns {string}
  */
@@ -213,8 +213,8 @@ export function cellRawContentToStrings(rawContentCell){
 }
 
 /**
- * 
- * @param {SheetRowRawContent} rawContentRow 
+ *
+ * @param {SheetRowRawContent} rawContentRow
  * @returns {string[]}
  */
 export function rowRawContentToStrings(rawContentRow){
@@ -222,8 +222,8 @@ export function rowRawContentToStrings(rawContentRow){
 }
 
 /**
- * 
- * @param {SheetRawContent} rawContentSheet 
+ *
+ * @param {SheetRawContent} rawContentSheet
  * @returns {string[][]}
  */
 export function sheetRawContentToStrings(rawContentSheet){
@@ -231,8 +231,8 @@ export function sheetRawContentToStrings(rawContentSheet){
 }
 
 /**
- * 
- * @param {Map<SheetName, SheetRawContent>} rawContentSheets 
+ *
+ * @param {Map<SheetName, SheetRawContent>} rawContentSheets
  * @returns {Map<SheetName, string[][]>}
  */
 export function tableRawContentToStrings(rawContentSheets){
@@ -253,16 +253,16 @@ export function tableRawContentToStrings(rawContentSheets){
 
 /**
  * This function expects the first row to contain string values which are used as column names
- * It outputs an array of objects which keys are 
+ * It outputs an array of objects which keys are
  *
- * @param {SheetRawContent} rawContent 
+ * @param {SheetRawContent} rawContent
  * @returns {any[]}
  */
 export function sheetRawContentToObjects(rawContent){
     let [firstRow, ...dataRows] = rawContent
 
     /** @type {string[]} */
-    
+
     const columns = firstRow.map((r, i) => {
         if (r.value === undefined || r.value === null || r.value === "") {
             return `Column ${i+1}`
@@ -284,8 +284,8 @@ export function sheetRawContentToObjects(rawContent){
 }
 
 /**
- * 
- * @param {Map<SheetName, SheetRawContent>} rawContentSheets 
+ *
+ * @param {Map<SheetName, SheetRawContent>} rawContentSheets
  * @returns {Map<SheetName, any[]>}
  */
 export function tableRawContentToObjects(rawContentSheets){
@@ -312,7 +312,7 @@ export function isCellFilled({value}){
 }
 
 /**
- * @param {SheetRowRawContent} rawContentRow 
+ * @param {SheetRowRawContent} rawContentRow
  * @returns {boolean}
  */
 export function isRowNotEmpty(rawContentRow){
@@ -320,7 +320,7 @@ export function isRowNotEmpty(rawContentRow){
 }
 
 /**
- * @param {SheetRawContent} sheet 
+ * @param {SheetRawContent} sheet
  * @returns {SheetRawContent}
  */
 export function removeEmptyRowsFromSheet(sheet){
@@ -329,8 +329,8 @@ export function removeEmptyRowsFromSheet(sheet){
 
 
 /**
- * 
- * @param {Map<SheetName, SheetRawContent>} rawContentTable 
+ *
+ * @param {Map<SheetName, SheetRawContent>} rawContentTable
  * @returns {Map<SheetName, SheetRawContent>}
  */
 export function tableWithoutEmptyRows(rawContentTable){
